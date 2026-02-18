@@ -44,6 +44,10 @@ namespace Hotel_Manager.Data
             modelBuilder.Entity<HotelService>()
                 .Property(s => s.Price)
                 .HasPrecision(18, 2);
+
+            modelBuilder.Entity<Reservation>()
+                .Property(r => r.TotalPrice)
+                .HasPrecision(18, 2);
         }
     }
 }
