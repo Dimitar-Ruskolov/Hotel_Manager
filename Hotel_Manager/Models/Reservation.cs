@@ -16,6 +16,23 @@
 
         public ICollection<ReservationRoom> ReservationRooms { get; set; } = new List<ReservationRoom>();
         public ICollection<ReservationService> ReservationServices { get; set; } = new List<ReservationService>();
-    
+
+        public void CalculateTotalPrice(decimal pricePerNight, IEnumerable<decimal> servicePrices)
+        {
+            var nights = (CheckOutDate.Date - CheckInDate.Date).Days;
+            if (nights <= 0)
+            {
+                throw new InvalidOperationException("Check-out must be after check-in.");
+            }
+            else
+            {
+                var basePrice = nights * pricePerNight;
+                var servicesTotal = servicePrices.Sum();
+                TotalPrice = basePrice + servicesTotal;
+            }
+                
+
+            
+        }
     }
 }

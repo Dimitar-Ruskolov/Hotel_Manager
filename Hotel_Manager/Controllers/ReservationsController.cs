@@ -57,11 +57,25 @@ namespace Hotel_Manager.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,CheckInDate,CheckOutDate,TotalPrice,Status,CreatedAt,UserId")] Reservation reservation)
+        public async Task<IActionResult> Create([Bind("Id,CheckInDate,CheckOutDate,Status,CreatedAt,UserId")] Reservation reservation)
         {
             if (ModelState.IsValid)
             {
                 _context.Add(reservation);
+                await _context.SaveChangesAsync();
+
+                var pricePerNight = await _context.Rooms
+                    .Where(r => r.Id == reservation.RoomId)
+                      .Select(r => r.RoomType.PricePerNight)
+                      .FirstAsync();
+
+                var servicePrices = await _context.ReservationServices
+                    .Where(rs => rs.ReservationId == reservation.Id)
+                    .Select(rs => rs.HotelService.Price)
+                    .ToListAsync();
+
+                reservation.CalculateTotalPrice(pricePerNight, servicePrices);
+
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
