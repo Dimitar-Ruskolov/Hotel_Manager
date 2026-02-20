@@ -29,18 +29,13 @@ namespace Hotel_Manager.Controllers
         // GET: Rooms/Details/5
         public async Task<IActionResult> Details(int? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            if (id == null) return NotFound();
 
             var room = await _context.Rooms
                 .Include(r => r.RoomType)
                 .FirstOrDefaultAsync(m => m.Id == id);
-            if (room == null)
-            {
-                return NotFound();
-            }
+
+            if (room == null) return NotFound();
 
             return View(room);
         }
@@ -48,13 +43,11 @@ namespace Hotel_Manager.Controllers
         // GET: Rooms/Create
         public IActionResult Create()
         {
-            ViewData["RoomTypeId"] = new SelectList(_context.RoomTypes, "Id", "Id");
+            ViewData["RoomTypeId"] = new SelectList(_context.RoomTypes, "Id", "Name");
             return View();
         }
 
         // POST: Rooms/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("Id,RoomNumber,IsAvailable,RoomTypeId")] Room room)
@@ -65,38 +58,28 @@ namespace Hotel_Manager.Controllers
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["RoomTypeId"] = new SelectList(_context.RoomTypes, "Id", "Id", room.RoomTypeId);
+            ViewData["RoomTypeId"] = new SelectList(_context.RoomTypes, "Id", "Name", room.RoomTypeId);
             return View(room);
         }
 
         // GET: Rooms/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            if (id == null) return NotFound();
 
             var room = await _context.Rooms.FindAsync(id);
-            if (room == null)
-            {
-                return NotFound();
-            }
-            ViewData["RoomTypeId"] = new SelectList(_context.RoomTypes, "Id", "Id", room.RoomTypeId);
+            if (room == null) return NotFound();
+
+            ViewData["RoomTypeId"] = new SelectList(_context.RoomTypes, "Id", "Name", room.RoomTypeId);
             return View(room);
         }
 
         // POST: Rooms/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("Id,RoomNumber,IsAvailable,RoomTypeId")] Room room)
         {
-            if (id != room.Id)
-            {
-                return NotFound();
-            }
+            if (id != room.Id) return NotFound();
 
             if (ModelState.IsValid)
             {
@@ -107,36 +90,25 @@ namespace Hotel_Manager.Controllers
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    if (!RoomExists(room.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
+                    if (!RoomExists(room.Id)) return NotFound();
+                    else throw;
                 }
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["RoomTypeId"] = new SelectList(_context.RoomTypes, "Id", "Id", room.RoomTypeId);
+            ViewData["RoomTypeId"] = new SelectList(_context.RoomTypes, "Id", "Name", room.RoomTypeId);
             return View(room);
         }
 
         // GET: Rooms/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            if (id == null) return NotFound();
 
             var room = await _context.Rooms
                 .Include(r => r.RoomType)
                 .FirstOrDefaultAsync(m => m.Id == id);
-            if (room == null)
-            {
-                return NotFound();
-            }
+
+            if (room == null) return NotFound();
 
             return View(room);
         }
@@ -148,9 +120,7 @@ namespace Hotel_Manager.Controllers
         {
             var room = await _context.Rooms.FindAsync(id);
             if (room != null)
-            {
                 _context.Rooms.Remove(room);
-            }
 
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));

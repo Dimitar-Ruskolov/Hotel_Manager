@@ -5,8 +5,7 @@
         public int Id { get; set; }
 
         public string LicensePlate { get; set; } = null!;
-
-        public int UserId { get; set; }
-        public User User { get; set; } = null!;
+        public string UserId { get; set; } = null!;
+        public ApplicationUser User { get; set; } = null!;
     }
 }

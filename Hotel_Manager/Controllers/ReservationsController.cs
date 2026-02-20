@@ -29,18 +29,13 @@ namespace Hotel_Manager.Controllers
         // GET: Reservations/Details/5
         public async Task<IActionResult> Details(int? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            if (id == null) return NotFound();
 
             var reservation = await _context.Reservations
                 .Include(r => r.User)
                 .FirstOrDefaultAsync(m => m.Id == id);
-            if (reservation == null)
-            {
-                return NotFound();
-            }
+
+            if (reservation == null) return NotFound();
 
             return View(reservation);
         }
@@ -48,69 +43,43 @@ namespace Hotel_Manager.Controllers
         // GET: Reservations/Create
         public IActionResult Create()
         {
-            ViewData["UserId"] = new SelectList(_context.Users, "Id", "Id");
+            ViewData["UserId"] = new SelectList(_context.Users, "Id", "Email");
             return View();
         }
 
         // POST: Reservations/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,CheckInDate,CheckOutDate,Status,CreatedAt,UserId")] Reservation reservation)
+        public async Task<IActionResult> Create([Bind("Id,CheckInDate,CheckOutDate,TotalPrice,Status,CreatedAt,UserId")] Reservation reservation)
         {
             if (ModelState.IsValid)
             {
                 _context.Add(reservation);
                 await _context.SaveChangesAsync();
-
-                var pricePerNight = await _context.Rooms
-                    .Where(r => r.Id == reservation.RoomId)
-                      .Select(r => r.RoomType.PricePerNight)
-                      .FirstAsync();
-
-                var servicePrices = await _context.ReservationServices
-                    .Where(rs => rs.ReservationId == reservation.Id)
-                    .Select(rs => rs.HotelService.Price)
-                    .ToListAsync();
-
-                reservation.CalculateTotalPrice(pricePerNight, servicePrices);
-
-                await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["UserId"] = new SelectList(_context.Users, "Id", "Id", reservation.UserId);
+            ViewData["UserId"] = new SelectList(_context.Users, "Id", "Email", reservation.UserId);
             return View(reservation);
         }
 
         // GET: Reservations/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            if (id == null) return NotFound();
 
             var reservation = await _context.Reservations.FindAsync(id);
-            if (reservation == null)
-            {
-                return NotFound();
-            }
-            ViewData["UserId"] = new SelectList(_context.Users, "Id", "Id", reservation.UserId);
+            if (reservation == null) return NotFound();
+
+            ViewData["UserId"] = new SelectList(_context.Users, "Id", "Email", reservation.UserId);
             return View(reservation);
         }
 
         // POST: Reservations/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("Id,CheckInDate,CheckOutDate,TotalPrice,Status,CreatedAt,UserId")] Reservation reservation)
         {
-            if (id != reservation.Id)
-            {
-                return NotFound();
-            }
+            if (id != reservation.Id) return NotFound();
 
             if (ModelState.IsValid)
             {
@@ -121,36 +90,25 @@ namespace Hotel_Manager.Controllers
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    if (!ReservationExists(reservation.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
+                    if (!ReservationExists(reservation.Id)) return NotFound();
+                    else throw;
                 }
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["UserId"] = new SelectList(_context.Users, "Id", "Id", reservation.UserId);
+            ViewData["UserId"] = new SelectList(_context.Users, "Id", "Email", reservation.UserId);
             return View(reservation);
         }
 
         // GET: Reservations/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            if (id == null) return NotFound();
 
             var reservation = await _context.Reservations
                 .Include(r => r.User)
                 .FirstOrDefaultAsync(m => m.Id == id);
-            if (reservation == null)
-            {
-                return NotFound();
-            }
+
+            if (reservation == null) return NotFound();
 
             return View(reservation);
         }
@@ -162,9 +120,7 @@ namespace Hotel_Manager.Controllers
         {
             var reservation = await _context.Reservations.FindAsync(id);
             if (reservation != null)
-            {
                 _context.Reservations.Remove(reservation);
-            }
 
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
