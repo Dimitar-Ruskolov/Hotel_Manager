@@ -20,6 +20,8 @@ namespace Hotel_Manager
                 .AddEntityFrameworkStores<ApplicationDbContext>();
             builder.Services.AddControllersWithViews();
 
+            builder.Services.AddScoped<ReservationTotalPriceService>();
+
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.

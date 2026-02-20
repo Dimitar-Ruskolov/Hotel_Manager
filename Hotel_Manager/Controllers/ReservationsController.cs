@@ -7,16 +7,19 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using Hotel_Manager.Data;
 using Hotel_Manager.Models;
+using Hotel_Manager.Services;
 
 namespace Hotel_Manager.Controllers
 {
     public class ReservationsController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly ReservationTotalPriceService _totalPriceService;
 
-        public ReservationsController(ApplicationDbContext context)
+        public ReservationsController(ApplicationDbContext context, ReservationPricingService pricingService)
         {
             _context = context;
+            _totalPriceService = pricingService;
         }
 
         // GET: Reservations
@@ -64,19 +67,8 @@ namespace Hotel_Manager.Controllers
                 _context.Add(reservation);
                 await _context.SaveChangesAsync();
 
-                var pricePerNight = await _context.Rooms
-                    .Where(r => r.Id == reservation.RoomId)
-                      .Select(r => r.RoomType.PricePerNight)
-                      .FirstAsync();
+                await _totalPriceService.RecalculateTotalPriceAsync(reservation.Id);
 
-                var servicePrices = await _context.ReservationServices
-                    .Where(rs => rs.ReservationId == reservation.Id)
-                    .Select(rs => rs.HotelService.Price)
-                    .ToListAsync();
-
-                reservation.CalculateTotalPrice(pricePerNight, servicePrices);
-
-                await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
             ViewData["UserId"] = new SelectList(_context.Users, "Id", "Id", reservation.UserId);
