@@ -47,7 +47,16 @@ namespace Hotel_Manager.Controllers
         public IActionResult Create()
         {
             ViewData["UserId"] = new SelectList(_context.Users, "Id", "Email");
-            ViewBag.Rooms = new SelectList(_context.Rooms, "Id", "Id");
+
+            var availableRoomTypes = _context.RoomTypes
+               .Where(rt => _context.Rooms
+                   .Any(r => r.RoomTypeId == rt.Id && r.IsAvailable))
+               .Select(rt => new { rt.Id, rt.Name })
+               .ToList();
+
+            ViewData["RoomTypes"] = new SelectList(availableRoomTypes, "Id", "Name");
+
+            ViewData["Services"] = new SelectList(_context.HotelServices, "Id", "Name");
             ViewBag.Services = new SelectList(_context.HotelServices, "Id", "Name");
             return View();
         }
@@ -55,33 +64,49 @@ namespace Hotel_Manager.Controllers
         // POST: Reservations/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,CheckInDate,CheckOutDate,Status,CreatedAt,UserId")] Reservation reservation, List<int> roomIds,
+        public async Task<IActionResult> Create([Bind("Id,CheckInDate,CheckOutDate,Status,CreatedAt,UserId")] Reservation reservation, int roomTypeId, 
     List<int> serviceIds)
         {
+            ModelState.Remove("User");
             if (ModelState.IsValid)
             {
-                reservation.ReservationRooms = roomIds
-                    .Select(roomId => new ReservationRoom { RoomId = roomId })
-                    .ToList();
-
-                reservation.ReservationServices = serviceIds
-                    .Select(serviceId => new ReservationService { ServiceId = serviceId })
-                    .ToList();
-
-                var rooms = await _context.Rooms
-                    .Where(r => roomIds.Contains(r.Id))
+                var room = await _context.Rooms
                     .Include(r => r.RoomType)
-                    .ToListAsync();
+                    .FirstOrDefaultAsync(r => r.RoomTypeId == roomTypeId && r.IsAvailable);
+
+                if (room == null)
+                {
+                    ModelState.AddModelError("", "Няма свободна стая от избрания тип.");
+                }
+                else
+                {
+                    room.IsAvailable = false;
+
+                    reservation.ReservationRooms = new List<ReservationRoom> {new ReservationRoom { RoomId = room.Id, Room = room }};
+                }
 
                 var services = await _context.HotelServices
                     .Where(s => serviceIds.Contains(s.Id))
                     .ToListAsync();
 
-                foreach (var rr in reservation.ReservationRooms)
-                    rr.Room = rooms.First(r => r.Id == rr.RoomId);
+                reservation.ReservationServices = services
+                    .Select(s => new ReservationService { ServiceId = s.Id, HotelService = s })
+                    .ToList();
 
-                foreach (var rs in reservation.ReservationServices)
-                    rs.HotelService = services.First(s => s.Id == rs.ServiceId);
+                if (!ModelState.IsValid)
+                {
+                    ViewData["UserId"] = new SelectList(_context.Users, "Id", "Email", reservation.UserId);
+
+                    var availableRoomTypes = _context.RoomTypes
+                        .Where(rt => _context.Rooms.Any(r => r.RoomTypeId == rt.Id && r.IsAvailable))
+                        .Select(rt => new { rt.Id, rt.Name })
+                        .ToList();
+
+                    ViewData["RoomTypes"] = new SelectList(availableRoomTypes, "Id", "Name", roomTypeId);
+                    ViewData["Services"] = new SelectList(_context.HotelServices, "Id", "Name");
+
+                    return View(reservation);
+                }
 
                 reservation.TotalPrice = _totalPriceService.CalculateTotalPrice(reservation);
 
