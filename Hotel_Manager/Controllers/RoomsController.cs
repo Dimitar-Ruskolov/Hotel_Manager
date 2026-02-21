@@ -43,7 +43,7 @@ namespace Hotel_Manager.Controllers
         // GET: Rooms/Create
         public IActionResult Create()
         {
-            ViewData["RoomTypeId"] = new SelectList(_context.RoomTypes, "Id", "Name");
+            ViewBag.RoomTypeId = new SelectList(_context.RoomTypes, "Id", "Name");
             return View();
         }
 
@@ -52,13 +52,14 @@ namespace Hotel_Manager.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("Id,RoomNumber,IsAvailable,RoomTypeId")] Room room)
         {
+            ModelState.Remove("RoomType");           
             if (ModelState.IsValid)
             {
                 _context.Add(room);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["RoomTypeId"] = new SelectList(_context.RoomTypes, "Id", "Name", room.RoomTypeId);
+            ViewBag.RoomTypeId = new SelectList(_context.RoomTypes, "Id", "Name", room.RoomTypeId);
             return View(room);
         }
 
@@ -79,6 +80,7 @@ namespace Hotel_Manager.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("Id,RoomNumber,IsAvailable,RoomTypeId")] Room room)
         {
+            ModelState.Remove("RoomType");
             if (id != room.Id) return NotFound();
 
             if (ModelState.IsValid)

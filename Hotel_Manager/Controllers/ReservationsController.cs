@@ -7,16 +7,19 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using Hotel_Manager.Data;
 using Hotel_Manager.Models;
+using Hotel_Manager.Services;
 
 namespace Hotel_Manager.Controllers
 {
     public class ReservationsController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly ReservationTotalPriceService _totalPriceService;
 
-        public ReservationsController(ApplicationDbContext context)
+        public ReservationsController(ApplicationDbContext context, ReservationTotalPriceService reservationTotalPriceService)
         {
             _context = context;
+            _totalPriceService = reservationTotalPriceService;
         }
 
         // GET: Reservations
@@ -44,16 +47,44 @@ namespace Hotel_Manager.Controllers
         public IActionResult Create()
         {
             ViewData["UserId"] = new SelectList(_context.Users, "Id", "Email");
+            ViewBag.Rooms = new SelectList(_context.Rooms, "Id", "Id");
+            ViewBag.Services = new SelectList(_context.HotelServices, "Id", "Name");
             return View();
         }
 
         // POST: Reservations/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,CheckInDate,CheckOutDate,TotalPrice,Status,CreatedAt,UserId")] Reservation reservation)
+        public async Task<IActionResult> Create([Bind("Id,CheckInDate,CheckOutDate,Status,CreatedAt,UserId")] Reservation reservation, List<int> roomIds,
+    List<int> serviceIds)
         {
             if (ModelState.IsValid)
             {
+                reservation.ReservationRooms = roomIds
+                    .Select(roomId => new ReservationRoom { RoomId = roomId })
+                    .ToList();
+
+                reservation.ReservationServices = serviceIds
+                    .Select(serviceId => new ReservationService { ServiceId = serviceId })
+                    .ToList();
+
+                var rooms = await _context.Rooms
+                    .Where(r => roomIds.Contains(r.Id))
+                    .Include(r => r.RoomType)
+                    .ToListAsync();
+
+                var services = await _context.HotelServices
+                    .Where(s => serviceIds.Contains(s.Id))
+                    .ToListAsync();
+
+                foreach (var rr in reservation.ReservationRooms)
+                    rr.Room = rooms.First(r => r.Id == rr.RoomId);
+
+                foreach (var rs in reservation.ReservationServices)
+                    rs.HotelService = services.First(s => s.Id == rs.ServiceId);
+
+                reservation.TotalPrice = _totalPriceService.CalculateTotalPrice(reservation);
+
                 _context.Add(reservation);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));

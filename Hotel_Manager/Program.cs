@@ -1,5 +1,6 @@
 using Hotel_Manager.Data;
 using Hotel_Manager.Models;
+using Hotel_Manager.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -36,6 +37,8 @@ namespace Hotel_Manager
 
             builder.Services.AddControllersWithViews();
             builder.Services.AddRazorPages();
+
+            builder.Services.AddScoped<ReservationTotalPriceService>();
 
             var app = builder.Build();
 
