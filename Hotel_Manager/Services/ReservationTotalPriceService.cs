@@ -16,10 +16,10 @@ namespace Hotel_Manager.Services
                 throw new InvalidOperationException("Invalid reservation dates.");
 
             var roomsPerNight = reservation.ReservationRooms
-                .Sum(rr => rr.Room.RoomType.PricePerNight);
+                ?.Sum(rr => rr.Room?.RoomType?.PricePerNight ?? 0) ?? 0;
 
             var servicesTotal = reservation.ReservationServices
-                .Sum(rs => rs.HotelService.Price);
+                ?.Sum(rs => rs.HotelService?.Price ?? 0) ?? 0;
 
             var total = (roomsPerNight * nights) + servicesTotal;
             return decimal.Round(total, 2);

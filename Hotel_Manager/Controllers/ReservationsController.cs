@@ -4,6 +4,7 @@ using Hotel_Manager.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
@@ -28,27 +29,24 @@ namespace Hotel_Manager.Controllers
 
         public async Task<IActionResult> Index()
         {
-            if (User.IsInRole("Guest"))
-            {
-                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                return View(await _context.Reservations
-                    .Where(r => r.UserId == userId)
-                    .ToListAsync());
-            }
-
-            return View(await _context.Reservations
+            var reservations = await _context.Reservations
                 .Include(r => r.User)
-                .ToListAsync());
+                .Include(r => r.ReservationRooms).ThenInclude(rr => rr.Room)
+                .Include(r => r.ReservationServices).ThenInclude(rs => rs.HotelService)
+                .ToListAsync();
+
+            return View(reservations);
         }
 
         public async Task<IActionResult> Details(int id)
         {
             var reservation = await _context.Reservations
                 .Include(r => r.User)
+                .Include(r => r.ReservationRooms).ThenInclude(rr => rr.Room).ThenInclude(r => r.RoomType)
+                .Include(r => r.ReservationServices).ThenInclude(rs => rs.HotelService)
                 .FirstOrDefaultAsync(r => r.Id == id);
 
-            if (reservation == null)
-                return NotFound();
+            if (reservation == null) return NotFound();
 
             if (User.IsInRole("Guest") && reservation.UserId != _userManager.GetUserId(User))
                 return Forbid();
@@ -59,26 +57,149 @@ namespace Hotel_Manager.Controllers
         [Authorize(Roles = "Admin,Receptionist")]
         public IActionResult Create()
         {
-            ViewData["UserId"] = _context.Users.ToList();
+            // Свободни типове стаи
+            var availableRoomTypes = _context.RoomTypes
+                .Where(rt => _context.Rooms.Any(r => r.RoomTypeId == rt.Id && r.IsAvailable))
+                .Select(rt => new { rt.Id, rt.Name })
+                .ToList();
+
+            ViewData["RoomTypes"] = new SelectList(availableRoomTypes, "Id", "Name");
+            ViewData["Services"] = new SelectList(_context.HotelServices, "Id", "Name");
+
             return View();
         }
 
-        [Authorize(Roles = "Admin,Receptionist")]
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(Reservation reservation)
+        [Authorize(Roles = "Admin,Receptionist")]
+        public async Task<IActionResult> Create(
+            Reservation reservation,
+            string guestEmail,
+            string firstName,
+            string lastName,
+            int age,
+            int roomTypeId,
+            List<int> serviceIds)
         {
+            if (string.IsNullOrEmpty(guestEmail))
+            {
+                ModelState.AddModelError("", "Email на госта е задължителен.");
+                return ReloadCreateView(reservation, roomTypeId);
+            }
+
+            // === 1. Създаване / намиране на гост ===
+            var user = await _userManager.FindByEmailAsync(guestEmail);
+
+            if (user == null)
+            {
+                // === СЪЗДАВАНЕ НА НОВ ПРОФИЛ ===
+                string generatedPassword = GenerateRandomPassword(10);
+
+                user = new ApplicationUser
+                {
+                    UserName = guestEmail,
+                    Email = guestEmail,
+                    FirstName = firstName ?? "Guest",
+                    LastName = lastName ?? "Guest",
+                    Age = age,
+                    EmailConfirmed = true,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                var result = await _userManager.CreateAsync(user, generatedPassword);
+
+                if (!result.Succeeded)
+                {
+                    foreach (var error in result.Errors)
+                        ModelState.AddModelError("", error.Description);
+
+                    return ReloadCreateView(reservation, roomTypeId);
+                }
+
+                await _userManager.AddToRoleAsync(user, "Guest");
+
+                // Показваме паролата на рецепциониста
+                TempData["NewGuestEmail"] = guestEmail;
+                TempData["NewGuestPassword"] = generatedPassword;
+            }
+
+            reservation.UserId = user.Id;
+
+            // === 2. Намиране на свободна стая ===
+            var room = await _context.Rooms
+                .Include(r => r.RoomType)
+                .FirstOrDefaultAsync(r => r.RoomTypeId == roomTypeId && r.IsAvailable);
+
+            if (room == null)
+            {
+                ModelState.AddModelError("", "Няма свободна стая от избрания тип.");
+                return ReloadCreateView(reservation, roomTypeId);
+            }
+
+            room.IsAvailable = false;
+
+            reservation.ReservationRooms = new List<ReservationRoom>
+            {
+                new ReservationRoom { RoomId = room.Id, Room = room }
+            };
+
+            // === 3. Услуги ===
+            if (serviceIds != null && serviceIds.Any())
+            {
+                var services = await _context.HotelServices
+                    .Where(s => serviceIds.Contains(s.Id))
+                    .ToListAsync();
+
+                reservation.ReservationServices = services
+                    .Select(s => new ReservationService { HotelService = s })
+                    .ToList();
+            }
+
+            // === 4. Цена и запазване ===
             reservation.TotalPrice = _priceService.CalculateTotalPrice(reservation);
+            reservation.CreatedAt = DateTime.UtcNow;
+            reservation.Status ??= "Pending";
+
             _context.Add(reservation);
             await _context.SaveChangesAsync();
+
             return RedirectToAction(nameof(Index));
+        }
+
+        private IActionResult ReloadCreateView(Reservation reservation, int roomTypeId)
+        {
+            var availableRoomTypes = _context.RoomTypes
+                .Where(rt => _context.Rooms.Any(r => r.RoomTypeId == rt.Id && r.IsAvailable))
+                .Select(rt => new { rt.Id, rt.Name })
+                .ToList();
+
+            ViewData["RoomTypes"] = new SelectList(availableRoomTypes, "Id", "Name", roomTypeId);
+            ViewData["Services"] = new SelectList(_context.HotelServices, "Id", "Name");
+
+            return View(reservation);
+        }
+
+        // Генериране на случайна парола
+        private string GenerateRandomPassword(int length)
+        {
+            const string validChars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz123456789!@#$%^&*";
+            var random = new Random();
+            return new string(Enumerable.Repeat(validChars, length)
+                .Select(s => s[random.Next(s.Length)]).ToArray());
         }
 
         [Authorize(Roles = "Admin,Receptionist")]
         public async Task<IActionResult> Delete(int id)
         {
-            var reservation = await _context.Reservations.FindAsync(id);
+            var reservation = await _context.Reservations
+                .Include(r => r.ReservationRooms)
+                .FirstOrDefaultAsync(r => r.Id == id);
+
             if (reservation == null) return NotFound();
+
+            foreach (var rr in reservation.ReservationRooms)
+                rr.Room.IsAvailable = true;
 
             _context.Reservations.Remove(reservation);
             await _context.SaveChangesAsync();

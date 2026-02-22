@@ -21,16 +21,6 @@ namespace Hotel_Manager.Controllers
             return View(await _context.HotelServices.ToListAsync());
         }
 
-        public async Task<IActionResult> Details(int? id)
-        {
-            if (id == null) return NotFound();
-
-            var hotelService = await _context.HotelServices.FirstOrDefaultAsync(m => m.Id == id);
-            if (hotelService == null) return NotFound();
-
-            return View(hotelService);
-        }
-
         public IActionResult Create()
         {
             return View();
@@ -38,62 +28,57 @@ namespace Hotel_Manager.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(HotelService hotelService)
+        public async Task<IActionResult> Create(HotelService service)
         {
-            if (ModelState.IsValid)
-            {
-                _context.Add(hotelService);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
-            }
-            return View(hotelService);
+            if (!ModelState.IsValid) return View(service);
+
+            _context.Add(service);
+            await _context.SaveChangesAsync();
+
+            return RedirectToAction(nameof(Index));
         }
 
-        public async Task<IActionResult> Edit(int? id)
+        public async Task<IActionResult> Edit(int id)
         {
-            if (id == null) return NotFound();
+            var service = await _context.HotelServices.FindAsync(id);
+            if (service == null) return NotFound();
 
-            var hotelService = await _context.HotelServices.FindAsync(id);
-            if (hotelService == null) return NotFound();
-
-            return View(hotelService);
+            return View(service);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, HotelService hotelService)
+        public async Task<IActionResult> Edit(int id, HotelService service)
         {
-            if (id != hotelService.Id) return NotFound();
+            if (id != service.Id) return NotFound();
 
-            if (ModelState.IsValid)
-            {
-                _context.Update(hotelService);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
-            }
-            return View(hotelService);
+            if (!ModelState.IsValid) return View(service);
+
+            _context.Update(service);
+            await _context.SaveChangesAsync();
+
+            return RedirectToAction(nameof(Index));
         }
 
-        public async Task<IActionResult> Delete(int? id)
+        public async Task<IActionResult> Delete(int id)
         {
-            if (id == null) return NotFound();
+            var service = await _context.HotelServices.FindAsync(id);
+            if (service == null) return NotFound();
 
-            var hotelService = await _context.HotelServices.FirstOrDefaultAsync(m => m.Id == id);
-            if (hotelService == null) return NotFound();
-
-            return View(hotelService);
+            return View(service);
         }
 
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var hotelService = await _context.HotelServices.FindAsync(id);
-            if (hotelService != null)
+            var service = await _context.HotelServices.FindAsync(id);
+            if (service != null)
             {
-                _context.HotelServices.Remove(hotelService);
+                _context.HotelServices.Remove(service);
                 await _context.SaveChangesAsync();
             }
+
             return RedirectToAction(nameof(Index));
         }
     }
