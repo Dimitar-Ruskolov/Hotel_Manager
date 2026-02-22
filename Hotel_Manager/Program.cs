@@ -37,7 +37,7 @@ namespace Hotel_Manager
             builder.Services.AddRazorPages();
 
             builder.Services.AddScoped<ReservationTotalPriceService>();
-
+            builder.Services.AddScoped<RoomAvailabilityService>();
             // ✅ РЕШАВА IEmailSender грешката
             builder.Services.AddTransient<IEmailSender, EmailSender>();
 

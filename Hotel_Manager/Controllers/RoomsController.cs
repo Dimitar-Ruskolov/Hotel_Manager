@@ -4,19 +4,22 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
-
+using Hotel_Manager.Services;
 
 
 namespace Hotel_Manager.Controllers
 {
+
     [Authorize(Roles = "Admin")]
+
     public class RoomsController : Controller
     {
         private readonly ApplicationDbContext _context;
-
-        public RoomsController(ApplicationDbContext context)
+        private readonly RoomAvailabilityService _roomAvailabilityService;
+        public RoomsController(ApplicationDbContext context, RoomAvailabilityService roomAvailabilityService)
         {
-            _context = context;
+            _context = context; 
+            _roomAvailabilityService = roomAvailabilityService;
         }
 
         // GET: Rooms
@@ -48,7 +51,7 @@ namespace Hotel_Manager.Controllers
         // GET: Rooms/Create
         public IActionResult Create()
         {
-            ViewData["RoomTypeId"] = new SelectList(_context.RoomTypes, "Id", "Id");
+            ViewData["RoomTypeId"] = new SelectList(_context.RoomTypes, "Id", "Name");
             return View();
         }
 
@@ -59,14 +62,21 @@ namespace Hotel_Manager.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("Id,RoomNumber,IsAvailable,RoomTypeId")] Room room)
         {
-            if (ModelState.IsValid)
+            ModelState.Remove("RoomType");
+
+            var exists = await _context.RoomTypes.AnyAsync(rt => rt.Id == room.RoomTypeId);
+            if (!exists)
+                ModelState.AddModelError("RoomTypeId", "Моля избери валиден тип стая.");
+
+            if (!ModelState.IsValid)
             {
-                _context.Add(room);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                ViewBag.RoomTypeId = new SelectList(_context.RoomTypes, "Id", "Name", room.RoomTypeId);
+                return View(room);
             }
-            ViewData["RoomTypeId"] = new SelectList(_context.RoomTypes, "Id", "Id", room.RoomTypeId);
-            return View(room);
+
+            _context.Rooms.Add(room);
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
         }
 
         // GET: Rooms/Edit/5
@@ -82,6 +92,13 @@ namespace Hotel_Manager.Controllers
             {
                 return NotFound();
             }
+
+            if (await _roomAvailabilityService.IsRoomLockedAsync(room.Id))
+            {
+                TempData["Error"] = "Стаята е заета и не може да се редактира, докато резервацията не приключи/не бъде изтрита.";
+                return RedirectToAction(nameof(Index));
+            }
+
             ViewData["RoomTypeId"] = new SelectList(_context.RoomTypes, "Id", "Id", room.RoomTypeId);
             return View(room);
         }
@@ -91,7 +108,7 @@ namespace Hotel_Manager.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,RoomNumber,IsAvailable,RoomTypeId")] Room room)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,RoomNumber,RoomTypeId")] Room room)
         {
             
             if (id != room.Id)

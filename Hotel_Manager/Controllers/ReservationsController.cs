@@ -19,15 +19,18 @@ namespace Hotel_Manager.Controllers
         private readonly ApplicationDbContext _context;
         private readonly ReservationTotalPriceService _priceService;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly RoomAvailabilityService _roomAvailabilityService;
 
         public ReservationsController(
             ApplicationDbContext context,
             ReservationTotalPriceService priceService,
-            UserManager<ApplicationUser> userManager)
+            UserManager<ApplicationUser> userManager,
+            RoomAvailabilityService roomAvailabilityService)
         {
             _context = context;
             _priceService = priceService;
             _userManager = userManager;
+            _roomAvailabilityService = roomAvailabilityService;
         }
 
         private string DetermineStatus(DateTime checkIn, DateTime checkOut)
@@ -40,6 +43,8 @@ namespace Hotel_Manager.Controllers
 
         public async Task<IActionResult> Index()
         {
+            await _roomAvailabilityService.AutoCompleteExpiredReservationsAsync();
+
             var reservations = await _context.Reservations
                 .Include(r => r.User)
                 .Include(r => r.ReservationRooms).ThenInclude(rr => rr.Room).ThenInclude(r => r.RoomType)
@@ -325,15 +330,12 @@ namespace Hotel_Manager.Controllers
 
             var reservation = await _context.Reservations
                 .Include(r => r.ReservationRooms).ThenInclude(rr => rr.Room)
-                .FirstOrDefaultAsync(m => m.Id == id);
+                .FirstOrDefaultAsync(m => m.Id == id);          
 
             if (reservation == null) return NotFound();
 
-            foreach (var rr in reservation.ReservationRooms)
-            {
-                if (rr.Room != null)
-                    rr.Room.IsAvailable = true;
-            }
+            await _roomAvailabilityService
+                .SetAvailabilityByReservationIdAsync(reservation.Id, true);
 
             _context.Reservations.Remove(reservation);
             await _context.SaveChangesAsync();
