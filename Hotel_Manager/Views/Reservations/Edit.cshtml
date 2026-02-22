@@ -36,9 +36,8 @@
             </div>
 
             <div class="form-group mb-3">
-                <label asp-for="Status" class="control-label">Status</label>
-                <input asp-for="Status" class="form-control" />
-                <span asp-validation-for="Status" class="text-danger"></span>
+                <label class="control-label">Status (auto)</label>
+                <input asp-for="Status" class="form-control" disabled />
             </div>
 
             <div class="form-group mb-3">
@@ -46,12 +45,9 @@
                 <select name="roomTypeId" class="form-control" asp-items="@(ViewData["RoomTypes"] as SelectList)" required></select>
             </div>
 
-
             <div class="form-group mb-3">
                 <label>Additional Services (hold Ctrl to select multiple)</label>
-                <select name="serviceIds" class="form-control" multiple
-                        asp-items="@(ViewData["Services"] as MultiSelectList)">
-                </select>
+                <select name="serviceIds" class="form-control" multiple asp-items="@(ViewData["Services"] as MultiSelectList)"></select>
             </div>
 
             <div class="form-group mt-4">
@@ -63,7 +59,5 @@
 </div>
 
 @section Scripts {
-    @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
-    }
 }

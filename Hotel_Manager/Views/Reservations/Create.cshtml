@@ -29,6 +29,10 @@
                 <label class="control-label">Age</label>
                 <input name="age" type="number" class="form-control" min="0" max="120" />
             </div>
+            <div class="form-group">
+                <label class="control-label">Car License Plate <small class="text-muted">(optional)</small></label>
+                <input name="licensePlate" class="form-control" placeholder="CA1234AB" />
+            </div>
 
             <h4 class="mt-4">Reservation Details</h4>
             <hr />
@@ -41,10 +45,6 @@
                 <label asp-for="CheckOutDate" class="control-label"></label>
                 <input asp-for="CheckOutDate" class="form-control" required />
                 <span asp-validation-for="CheckOutDate" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Status" class="control-label"></label>
-                <input asp-for="Status" class="form-control" />
             </div>
 
             <div class="form-group">
@@ -69,7 +69,5 @@
 </div>
 
 @section Scripts {
-    @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
-    }
 }

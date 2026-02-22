@@ -6,6 +6,10 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Hotel_Manager.Controllers
 {
@@ -26,6 +30,14 @@ namespace Hotel_Manager.Controllers
             _userManager = userManager;
         }
 
+        private string DetermineStatus(DateTime checkIn, DateTime checkOut)
+        {
+            var now = DateTime.UtcNow.Date;
+            if (checkOut < now) return "Completed";
+            if (checkIn <= now && checkOut >= now) return "In Progress";
+            return "Upcoming";
+        }
+
         public async Task<IActionResult> Index()
         {
             var reservations = await _context.Reservations
@@ -37,13 +49,15 @@ namespace Hotel_Manager.Controllers
             return View(reservations);
         }
 
-        public async Task<IActionResult> Details(int id)
+        public async Task<IActionResult> Details(int? id)
         {
+            if (id == null) return NotFound();
+
             var reservation = await _context.Reservations
                 .Include(r => r.User)
                 .Include(r => r.ReservationRooms).ThenInclude(rr => rr.Room).ThenInclude(r => r.RoomType)
                 .Include(r => r.ReservationServices).ThenInclude(rs => rs.HotelService)
-                .FirstOrDefaultAsync(r => r.Id == id);
+                .FirstOrDefaultAsync(m => m.Id == id);
 
             if (reservation == null) return NotFound();
 
@@ -75,11 +89,12 @@ namespace Hotel_Manager.Controllers
             string guestEmail,
             string firstName,
             string lastName,
-            int age,
+            int? age,
             int roomTypeId,
-            List<int> serviceIds)
+            List<int>? serviceIds,
+            string? licensePlate)
         {
-            if (string.IsNullOrEmpty(guestEmail))
+            if (string.IsNullOrWhiteSpace(guestEmail))
             {
                 ModelState.AddModelError("", "Email на госта е задължителен.");
                 return ReloadCreateView(reservation, roomTypeId);
@@ -97,7 +112,7 @@ namespace Hotel_Manager.Controllers
                     Email = guestEmail,
                     FirstName = firstName ?? "Guest",
                     LastName = lastName ?? "Guest",
-                    Age = age,
+                    Age = age ?? 0,
                     EmailConfirmed = true,
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow
@@ -119,6 +134,17 @@ namespace Hotel_Manager.Controllers
 
             reservation.UserId = user.Id;
 
+            // Добавяне на автомобил 
+            if (!string.IsNullOrWhiteSpace(licensePlate))
+            {
+                var plate = licensePlate.Trim().ToUpperInvariant();
+                if (!await _context.UserCars.AnyAsync(c => c.UserId == user.Id && c.LicensePlate == plate))
+                {
+                    _context.UserCars.Add(new UserCar { LicensePlate = plate, UserId = user.Id });
+                }
+            }
+
+            // Стая
             var room = await _context.Rooms
                 .Include(r => r.RoomType)
                 .FirstOrDefaultAsync(r => r.RoomTypeId == roomTypeId && r.IsAvailable);
@@ -133,23 +159,20 @@ namespace Hotel_Manager.Controllers
 
             reservation.ReservationRooms = new List<ReservationRoom>
             {
-                new ReservationRoom { RoomId = room.Id, Room = room }
+                new ReservationRoom { RoomId = room.Id }
             };
 
-            if (serviceIds != null && serviceIds.Any())
+            // Услуги
+            if (serviceIds?.Any() == true)
             {
-                var services = await _context.HotelServices
-                    .Where(s => serviceIds.Contains(s.Id))
-                    .ToListAsync();
-
-                reservation.ReservationServices = services
-                    .Select(s => new ReservationService { HotelService = s })
+                reservation.ReservationServices = serviceIds
+                    .Select(sid => new ReservationService { ServiceId = sid })
                     .ToList();
             }
 
+            reservation.Status = DetermineStatus(reservation.CheckInDate, reservation.CheckOutDate);
             reservation.TotalPrice = _priceService.CalculateTotalPrice(reservation);
             reservation.CreatedAt = DateTime.UtcNow;
-            reservation.Status ??= "Pending";
 
             _context.Add(reservation);
             await _context.SaveChangesAsync();
@@ -158,12 +181,14 @@ namespace Hotel_Manager.Controllers
         }
 
         [Authorize(Roles = "Admin,Receptionist")]
-        public async Task<IActionResult> Edit(int id)
+        public async Task<IActionResult> Edit(int? id)
         {
+            if (id == null) return NotFound();
+
             var reservation = await _context.Reservations
+                .Include(r => r.User)
                 .Include(r => r.ReservationRooms).ThenInclude(rr => rr.Room).ThenInclude(r => r.RoomType)
                 .Include(r => r.ReservationServices).ThenInclude(rs => rs.HotelService)
-                .Include(r => r.User)
                 .FirstOrDefaultAsync(r => r.Id == id);
 
             if (reservation == null) return NotFound();
@@ -176,13 +201,12 @@ namespace Hotel_Manager.Controllers
             var currentRoomTypeId = reservation.ReservationRooms.FirstOrDefault()?.Room?.RoomTypeId;
             if (currentRoomTypeId.HasValue && !availableRoomTypes.Any(t => t.Id == currentRoomTypeId.Value))
             {
-                var currentType = await _context.RoomTypes
+                var current = await _context.RoomTypes
                     .Where(rt => rt.Id == currentRoomTypeId.Value)
                     .Select(rt => new { rt.Id, rt.Name })
                     .FirstOrDefaultAsync();
 
-                if (currentType != null)
-                    availableRoomTypes.Add(currentType);
+                if (current != null) availableRoomTypes.Add(current);
             }
 
             ViewData["RoomTypes"] = new SelectList(availableRoomTypes, "Id", "Name", currentRoomTypeId);
@@ -201,19 +225,17 @@ namespace Hotel_Manager.Controllers
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin,Receptionist")]
         public async Task<IActionResult> Edit(int id,
-            [Bind("Id,CheckInDate,CheckOutDate,Status,UserId")] Reservation reservation,
+            [Bind("Id,CheckInDate,CheckOutDate,UserId")] Reservation reservation,
             int roomTypeId,
-            List<int> serviceIds)
+            List<int>? serviceIds)
         {
             if (id != reservation.Id) return NotFound();
 
-
-            ModelState.Remove("User");  
+            ModelState.Remove("User");
 
             var existing = await _context.Reservations
-                .Include(r => r.ReservationRooms).ThenInclude(rr => rr.Room)
+                .Include(r => r.ReservationRooms).ThenInclude(rr => rr.Room).ThenInclude(r => r.RoomType)
                 .Include(r => r.ReservationServices)
-                .Include(r => r.User)
                 .FirstOrDefaultAsync(r => r.Id == id);
 
             if (existing == null) return NotFound();
@@ -225,16 +247,15 @@ namespace Hotel_Manager.Controllers
                     .Select(rt => new { rt.Id, rt.Name })
                     .ToListAsync();
 
-                var currentRoomTypeIdd = existing.ReservationRooms.FirstOrDefault()?.Room?.RoomTypeId;
-                if (currentRoomTypeIdd.HasValue && !availableRoomTypes.Any(t => t.Id == currentRoomTypeIdd.Value))
+                var current = existing.ReservationRooms.FirstOrDefault()?.Room?.RoomTypeId;
+                if (current.HasValue && !availableRoomTypes.Any(t => t.Id == current.Value))
                 {
-                    var currentType = await _context.RoomTypes
-                        .Where(rt => rt.Id == currentRoomTypeIdd.Value)
+                    var ct = await _context.RoomTypes
+                        .Where(rt => rt.Id == current.Value)
                         .Select(rt => new { rt.Id, rt.Name })
                         .FirstOrDefaultAsync();
 
-                    if (currentType != null)
-                        availableRoomTypes.Add(currentType);
+                    if (ct != null) availableRoomTypes.Add(ct);
                 }
 
                 ViewData["RoomTypes"] = new SelectList(availableRoomTypes, "Id", "Name", roomTypeId);
@@ -249,20 +270,20 @@ namespace Hotel_Manager.Controllers
                 return View(reservation);
             }
 
-
-            existing.UserId = reservation.UserId;
+            // Обновяване на основни полета
             existing.CheckInDate = reservation.CheckInDate;
             existing.CheckOutDate = reservation.CheckOutDate;
-            existing.Status = reservation.Status ?? "Pending";
+            existing.Status = DetermineStatus(existing.CheckInDate, existing.CheckOutDate);
 
-            // Смяна на стая
+            // Смяна на стая (ако е различен тип)
             var currentRoomTypeId = existing.ReservationRooms.FirstOrDefault()?.Room?.RoomTypeId;
             if (roomTypeId != currentRoomTypeId)
             {
-                foreach (var rr in existing.ReservationRooms)
+                // Освобождаване на старите стаи
+                foreach (var rr in existing.ReservationRooms.ToList())
                 {
-                    if (rr.Room != null)
-                        rr.Room.IsAvailable = true;
+                    if (rr.Room != null) rr.Room.IsAvailable = true;
+                    _context.ReservationRooms.Remove(rr);
                 }
 
                 var newRoom = await _context.Rooms
@@ -272,41 +293,39 @@ namespace Hotel_Manager.Controllers
                 if (newRoom == null)
                 {
                     ModelState.AddModelError("", "Няма свободна стая от избрания тип.");
-                    return View(reservation);
+                    return View(reservation); 
                 }
 
                 newRoom.IsAvailable = false;
-
-                existing.ReservationRooms.Clear();
-                existing.ReservationRooms.Add(new ReservationRoom { RoomId = newRoom.Id, Room = newRoom });
+                existing.ReservationRooms.Add(new ReservationRoom { RoomId = newRoom.Id });
             }
 
-            // Обновяване на услугите
-            existing.ReservationServices.Clear();
-            if (serviceIds != null && serviceIds.Any())
-            {
-                var services = await _context.HotelServices
-                    .Where(s => serviceIds.Contains(s.Id))
-                    .ToListAsync();
 
-                existing.ReservationServices = services
-                    .Select(s => new ReservationService { HotelService = s })
+            _context.ReservationServices.RemoveRange(existing.ReservationServices);
+
+            if (serviceIds?.Any() == true)
+            {
+                existing.ReservationServices = serviceIds
+                    .Select(sid => new ReservationService { ServiceId = sid })
                     .ToList();
             }
 
+            // Задължително преизчисляване на цената
             existing.TotalPrice = _priceService.CalculateTotalPrice(existing);
 
             await _context.SaveChangesAsync();
+
             return RedirectToAction(nameof(Index));
         }
 
         [Authorize(Roles = "Admin,Receptionist")]
-        public async Task<IActionResult> Delete(int id)
+        public async Task<IActionResult> Delete(int? id)
         {
+            if (id == null) return NotFound();
+
             var reservation = await _context.Reservations
-                .Include(r => r.ReservationRooms)
-                .ThenInclude(rr => rr.Room)
-                .FirstOrDefaultAsync(r => r.Id == id);
+                .Include(r => r.ReservationRooms).ThenInclude(rr => rr.Room)
+                .FirstOrDefaultAsync(m => m.Id == id);
 
             if (reservation == null) return NotFound();
 
