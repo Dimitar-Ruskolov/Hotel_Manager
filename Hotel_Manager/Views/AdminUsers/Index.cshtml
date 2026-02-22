@@ -26,13 +26,14 @@
         @foreach (var item in Model)
         {
             <tr>
-                <td>@item.Email</td>
-                <td>@item.FirstName</td>
-                <td>@item.LastName</td>
-                <td>@item.Age</td>
+                <td>@Html.DisplayFor(modelItem => item.Email)</td>
+                <td>@Html.DisplayFor(modelItem => item.FirstName)</td>
+                <td>@Html.DisplayFor(modelItem => item.LastName)</td>
+                <td>@Html.DisplayFor(modelItem => item.Age)</td>
                 <td>@(item.IsActive ? "Yes" : "No")</td>
-                <td>@item.Roles</td>
+                <td>@Html.DisplayFor(modelItem => item.Roles)</td>
                 <td>
+                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-info">Details</a>
                     <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-warning">Edit</a>
                     <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-danger">Delete</a>
                 </td>

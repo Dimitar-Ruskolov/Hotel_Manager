@@ -45,6 +45,30 @@ namespace Hotel_Manager.Controllers
             return View(userList);
         }
 
+        // GET: /AdminUsers/Details/{id}
+        public async Task<IActionResult> Details(string id)
+        {
+            if (string.IsNullOrEmpty(id)) return NotFound();
+
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null) return NotFound();
+
+            var roles = await _userManager.GetRolesAsync(user);
+
+            var model = new UserViewModel
+            {
+                Id = user.Id,
+                Email = user.Email,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Age = user.Age,
+                IsActive = user.IsActive,
+                Roles = string.Join(", ", roles)
+            };
+
+            return View(model);
+        }
+
         // GET: /AdminUsers/Create
         public IActionResult Create()
         {
@@ -91,15 +115,16 @@ namespace Hotel_Manager.Controllers
             return View(model);
         }
 
-        // GET: /AdminUsers/Edit/abc123...
+        // GET: /AdminUsers/Edit/{id}
         public async Task<IActionResult> Edit(string id)
         {
-            if (id == null) return NotFound();
+            if (string.IsNullOrEmpty(id)) return NotFound();
 
             var user = await _userManager.FindByIdAsync(id);
             if (user == null) return NotFound();
 
             var roles = await _userManager.GetRolesAsync(user);
+
             var model = new EditUserViewModel
             {
                 Id = user.Id,
@@ -115,15 +140,27 @@ namespace Hotel_Manager.Controllers
             return View(model);
         }
 
-        // POST: /AdminUsers/Edit/abc123...
+        // POST: /AdminUsers/Edit/{id}
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(EditUserViewModel model)
+        public async Task<IActionResult> Edit(EditUserViewModel model, string? NewRole = null)
         {
-            if (!ModelState.IsValid) return View(model);
+            if (string.IsNullOrEmpty(model.Id))
+            {
+                return NotFound();
+            }
+
+            if (!ModelState.IsValid)
+            {
+                ViewBag.Roles = new SelectList(new[] { "Admin", "Receptionist", "Guest" });
+                return View(model);
+            }
 
             var user = await _userManager.FindByIdAsync(model.Id);
-            if (user == null) return NotFound();
+            if (user == null)
+            {
+                return NotFound();
+            }
 
             user.FirstName = model.FirstName;
             user.LastName = model.LastName;
@@ -134,29 +171,44 @@ namespace Hotel_Manager.Controllers
             if (!updateResult.Succeeded)
             {
                 foreach (var error in updateResult.Errors)
+                {
                     ModelState.AddModelError(string.Empty, error.Description);
+                }
+                ViewBag.Roles = new SelectList(new[] { "Admin", "Receptionist", "Guest" });
                 return View(model);
             }
 
-            if (!string.IsNullOrEmpty(model.NewRole) && model.NewRole != model.CurrentRole)
+            // Role change logic
+            if (!string.IsNullOrWhiteSpace(NewRole) && NewRole != model.CurrentRole)
             {
                 var currentRoles = await _userManager.GetRolesAsync(user);
                 await _userManager.RemoveFromRolesAsync(user, currentRoles);
-                await _userManager.AddToRoleAsync(user, model.NewRole);
+
+                var addResult = await _userManager.AddToRoleAsync(user, NewRole);
+                if (!addResult.Succeeded)
+                {
+                    foreach (var error in addResult.Errors)
+                    {
+                        ModelState.AddModelError(string.Empty, error.Description);
+                    }
+                    ViewBag.Roles = new SelectList(new[] { "Admin", "Receptionist", "Guest" });
+                    return View(model);
+                }
             }
 
             return RedirectToAction(nameof(Index));
         }
 
-        // GET: /AdminUsers/Delete/abc123...
+        // GET: /AdminUsers/Delete/{id}
         public async Task<IActionResult> Delete(string id)
         {
-            if (id == null) return NotFound();
+            if (string.IsNullOrEmpty(id)) return NotFound();
 
             var user = await _userManager.FindByIdAsync(id);
             if (user == null) return NotFound();
 
             var roles = await _userManager.GetRolesAsync(user);
+
             var model = new DeleteUserViewModel
             {
                 Id = user.Id,
@@ -169,7 +221,7 @@ namespace Hotel_Manager.Controllers
             return View(model);
         }
 
-        // POST: /AdminUsers/Delete/abc123...
+        // POST: /AdminUsers/Delete/{id}
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(string id)
