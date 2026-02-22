@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
+
 namespace Hotel_Manager.Controllers
 {
     [Authorize(Roles = "Admin")]
@@ -45,7 +46,17 @@ namespace Hotel_Manager.Controllers
 
             return View(roomType);
         }
+        public async Task<IActionResult> Details(int? id)
+        {
+            if (id == null) return NotFound();
 
+            var roomType = await _context.RoomTypes
+                .FirstOrDefaultAsync(m => m.Id == id);
+
+            if (roomType == null) return NotFound();
+
+            return View(roomType);
+        }
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, RoomType roomType)

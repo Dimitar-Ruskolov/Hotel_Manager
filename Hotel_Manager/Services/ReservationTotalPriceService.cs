@@ -8,8 +8,8 @@ namespace Hotel_Manager.Services
     {
         public decimal CalculateTotalPrice(Reservation reservation)
         {
-            if (reservation is null)
-                throw new ArgumentNullException(nameof(reservation));
+            //if (reservation is null)
+               // throw new ArgumentNullException(nameof(reservation));
 
             var nights = (reservation.CheckOutDate.Date - reservation.CheckInDate.Date).Days;
             if (nights <= 0)

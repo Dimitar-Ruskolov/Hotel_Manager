@@ -59,6 +59,15 @@ namespace Hotel_Manager.Controllers
 
             return RedirectToAction(nameof(Index));
         }
+        public async Task<IActionResult> Details(int? id)
+        {
+            if (id == null) return NotFound();
+
+            var service = await _context.HotelServices.FirstOrDefaultAsync(s => s.Id == id.Value); // или _context.HotelServices.FirstOrDefaultAsync(...)
+            if (service == null) return NotFound();
+
+            return View(service);
+        }
 
         public async Task<IActionResult> Delete(int id)
         {
