@@ -1,65 +1,69 @@
 ﻿@model IEnumerable<Hotel_Manager.Models.Reservation>
 
 @{
-    ViewData["Title"] = "Index";
+    ViewData["Title"] = "Reservations";
 }
 
-<h1>Index</h1>
+<h1>Reservations</h1>
 
 <p>
-    <a asp-action="Create">Create New</a>
+    <a asp-action="Create" class="btn btn-success">Create New Reservation</a>
 </p>
-<table class="table">
+
+@if (TempData["NewGuestEmail"] != null && TempData["NewGuestPassword"] != null)
+{
+    <div class="alert alert-warning mt-3">
+        <h5>✅ Нов гост е създаден!</h5>
+        <p>
+            <strong>Email:</strong> @TempData["NewGuestEmail"]<br />
+            <strong>Генерирана парола:</strong>
+            <code class="bg-light p-2 border">@TempData["NewGuestPassword"]</code>
+        </p>
+        <small class="text-danger">
+            Тази парола се показва само веднъж! Предайте я на госта веднага.
+        </small>
+    </div>
+}
+
+<table class="table table-striped">
     <thead>
         <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.CheckInDate)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.CheckOutDate)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.TotalPrice)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Status)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.CreatedAt)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.User)
-            </th>
+            <th>Guest</th>
+            <th>Check-In</th>
+            <th>Check-Out</th>
+            <th>Room</th>
+            <th>Total Price</th>
+            <th>Status</th>
             <th></th>
         </tr>
     </thead>
     <tbody>
-@foreach (var item in Model) {
-        <tr>
-            <td>
-                @Html.DisplayFor(modelItem => item.CheckInDate)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.CheckOutDate)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.TotalPrice)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Status)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.CreatedAt)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.User.Id)
-            </td>
-            <td>
-                <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |
-                <a asp-action="Details" asp-route-id="@item.Id">Details</a> |
-                <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>
-            </td>
-        </tr>
-}
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.User?.FirstName @item.User?.LastName</td>
+                <td>@item.CheckInDate.ToShortDateString()</td>
+                <td>@item.CheckOutDate.ToShortDateString()</td>
+                <td>
+                    @if (item.ReservationRooms.Any())
+                    {
+                        foreach (var rr in item.ReservationRooms)
+                        {
+                            <span>@rr.Room?.RoomNumber (@rr.Room?.RoomType?.Name)</span>
+                
+                            <br />
+                        }
+                    }
+                </td>
+                <td>@item.TotalPrice.ToString("C")</td>
+                <td><span class="badge bg-primary">@item.Status</span></td>
+                <td>
+                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-info btn-sm">Details</a>
+                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-warning btn-sm">Edit</a>
+                    <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-danger btn-sm"
+                       onclick="return confirm('Are you sure?')">Delete</a>
+                </td>
+            </tr>
+        }
     </tbody>
 </table>

@@ -1,59 +1,69 @@
 ﻿@model Hotel_Manager.Models.Reservation
 
 @{
-    ViewData["Title"] = "Edit";
+    ViewData["Title"] = "Edit Reservation";
 }
 
-<h1>Edit</h1>
+<h1>Edit Reservation</h1>
 
-<h4>Reservation</h4>
-<hr />
+<div class="mb-4">
+    <h4>Current Guest</h4>
+    <p>@Model.User?.FirstName @Model.User?.LastName (@Model.User?.Email)</p>
+    <small class="text-muted">Guest information cannot be changed here.</small>
+</div>
+
 <div class="row">
-    <div class="col-md-4">
+    <div class="col-md-7">
         <form asp-action="Edit">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div asp-validation-summary="All" class="text-danger"></div>
+
             <input type="hidden" asp-for="Id" />
-            <div class="form-group">
+            <input type="hidden" asp-for="UserId" />
+
+            <h4>Reservation Details</h4>
+            <hr />
+
+            <div class="form-group mb-3">
                 <label asp-for="CheckInDate" class="control-label"></label>
-                <input asp-for="CheckInDate" class="form-control" />
+                <input asp-for="CheckInDate" class="form-control" required />
                 <span asp-validation-for="CheckInDate" class="text-danger"></span>
             </div>
-            <div class="form-group">
+
+            <div class="form-group mb-3">
                 <label asp-for="CheckOutDate" class="control-label"></label>
-                <input asp-for="CheckOutDate" class="form-control" />
+                <input asp-for="CheckOutDate" class="form-control" required />
                 <span asp-validation-for="CheckOutDate" class="text-danger"></span>
             </div>
-            <div class="form-group">
-                <label asp-for="TotalPrice" class="control-label"></label>
-                <input asp-for="TotalPrice" class="form-control" />
-                <span asp-validation-for="TotalPrice" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Status" class="control-label"></label>
+
+            <div class="form-group mb-3">
+                <label asp-for="Status" class="control-label">Status</label>
                 <input asp-for="Status" class="form-control" />
                 <span asp-validation-for="Status" class="text-danger"></span>
             </div>
-            <div class="form-group">
-                <label asp-for="CreatedAt" class="control-label"></label>
-                <input asp-for="CreatedAt" class="form-control" />
-                <span asp-validation-for="CreatedAt" class="text-danger"></span>
+
+            <div class="form-group mb-3">
+                <label>Room Type</label>
+                <select name="roomTypeId" class="form-control" asp-items="@(ViewData["RoomTypes"] as SelectList)" required></select>
             </div>
-            <div class="form-group">
-                <label asp-for="UserId" class="control-label"></label>
-                <select asp-for="UserId" class="form-control" asp-items="ViewBag.UserId"></select>
-                <span asp-validation-for="UserId" class="text-danger"></span>
+
+
+            <div class="form-group mb-3">
+                <label>Additional Services (hold Ctrl to select multiple)</label>
+                <select name="serviceIds" class="form-control" multiple
+                        asp-items="@(ViewData["Services"] as MultiSelectList)">
+                </select>
             </div>
-            <div class="form-group">
-                <input type="submit" value="Save" class="btn btn-primary" />
+
+            <div class="form-group mt-4">
+                <input type="submit" value="Save Changes" class="btn btn-primary btn-lg" />
+                <a asp-action="Index" class="btn btn-secondary">Cancel</a>
             </div>
         </form>
     </div>
 </div>
 
-<div>
-    <a asp-action="Index">Back to List</a>
-</div>
-
 @section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
 }

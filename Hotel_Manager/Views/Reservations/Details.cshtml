@@ -1,54 +1,55 @@
 ﻿@model Hotel_Manager.Models.Reservation
 
 @{
-    ViewData["Title"] = "Details";
+    ViewData["Title"] = "Reservation Details";
 }
 
-<h1>Details</h1>
+<h1>Reservation Details</h1>
+
+<div class="row">
+    <div class="col-md-8">
+        <dl class="row">
+            <dt class="col-sm-3">Guest</dt>
+            <dd class="col-sm-9">@Model.User?.FirstName @Model.User?.LastName (@Model.User?.Email)</dd>
+
+            <dt class="col-sm-3">Check-In</dt>
+            <dd class="col-sm-9">@Model.CheckInDate.ToShortDateString()</dd>
+
+            <dt class="col-sm-3">Check-Out</dt>
+            <dd class="col-sm-9">@Model.CheckOutDate.ToShortDateString()</dd>
+
+            <dt class="col-sm-3">Total Price</dt>
+            <dd class="col-sm-9">@Model.TotalPrice.ToString("C")</dd>
+
+            <dt class="col-sm-3">Status</dt>
+            <dd class="col-sm-9"><span class="badge bg-primary">@Model.Status</span></dd>
+
+            <dt class="col-sm-3">Room(s)</dt>
+            <dd class="col-sm-9">
+                @foreach (var rr in Model.ReservationRooms)
+                {
+                    <div>@rr.Room?.RoomNumber - @rr.Room?.RoomType?.Name (@rr.Room?.RoomType?.PricePerNight.ToString("C")/night)</div>
+                }
+            </dd>
+
+            <dt class="col-sm-3">Services</dt>
+            <dd class="col-sm-9">
+                @if (Model.ReservationServices.Any())
+                {
+                    foreach (var rs in Model.ReservationServices)
+                    {
+                        <span class="badge bg-secondary me-1">@rs.HotelService?.Name (@rs.HotelService?.Price.ToString("C"))</span>
+                    }
+                }
+                else
+                {
+                    <span class="text-muted">No additional services</span>
+                }
+            </dd>
+        </dl>
+    </div>
+</div>
 
 <div>
-    <h4>Reservation</h4>
-    <hr />
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.CheckInDate)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.CheckInDate)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.CheckOutDate)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.CheckOutDate)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.TotalPrice)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.TotalPrice)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Status)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Status)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.CreatedAt)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.CreatedAt)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.User)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.User.Id)
-        </dd>
-    </dl>
-</div>
-<div>
-    <a asp-action="Edit" asp-route-id="@Model?.Id">Edit</a> |
-    <a asp-action="Index">Back to List</a>
+    <a asp-action="Index" class="btn btn-secondary">Back to List</a>
 </div>
