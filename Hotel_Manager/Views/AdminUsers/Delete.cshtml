@@ -1,0 +1,28 @@
+﻿@model Hotel_Manager.Models.DeleteUserViewModel
+
+@{
+    ViewData["Title"] = "Изтрий потребител";
+}
+
+<h1>Изтрий потребител</h1>
+
+<div class="alert alert-warning">
+    <h4>Сигурни ли сте, че искате да изтриете този потребител?</h4>
+    <dl class="row">
+        <dt class="col-sm-3">Email</dt>
+        <dd class="col-sm-9">@Model.Email</dd>
+
+        <dt class="col-sm-3">Име</dt>
+        <dd class="col-sm-9">@Model.FirstName @Model.LastName</dd>
+
+        <dt class="col-sm-3">Роли</dt>
+        <dd class="col-sm-9">@Model.Roles</dd>
+    </dl>
+    <p class="text-danger">Това действие е **необратимо**!</p>
+</div>
+
+<form asp-action="Delete">
+    <input type="hidden" asp-for="Id" />
+    <button type="submit" class="btn btn-danger">Да, изтрий</button>
+    <a asp-action="Index" class="btn btn-secondary">Отказ</a>
+</form>
