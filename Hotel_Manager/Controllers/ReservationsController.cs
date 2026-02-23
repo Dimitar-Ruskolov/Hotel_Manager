@@ -108,14 +108,14 @@ namespace Hotel_Manager.Controllers
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin,Receptionist")]
         public async Task<IActionResult> Create(
-    Reservation reservation,
-    string guestEmail,
-    string firstName,
-    string lastName,
-    int? age,
-    int roomTypeId,
-    List<int>? serviceIds,
-    string? licensePlate)
+            Reservation reservation,
+            string guestEmail,
+            string firstName,
+            string lastName,
+            int? age,
+            int roomTypeId,
+            List<int>? serviceIds,
+            string? licensePlate)
         {
             if (string.IsNullOrWhiteSpace(guestEmail))
             {
@@ -181,10 +181,25 @@ namespace Hotel_Manager.Controllers
                 new ReservationRoom { RoomId = room.Id }
             };
 
+            // Услуги
             if (serviceIds?.Any() == true)
             {
-                reservation.ReservationServices = serviceIds
-                    .Select(sid => new ReservationService { ServiceId = sid })
+                var selectedServices = await _context.HotelServices
+                    .Where(s => serviceIds.Contains(s.Id))
+                    .ToListAsync();
+
+                if (selectedServices.Count != serviceIds.Count)
+                {
+                    ModelState.AddModelError("", "One or more selected services no longer exist.");
+                    return ReloadCreateView(reservation, roomTypeId);
+                }
+
+                reservation.ReservationServices = selectedServices
+                    .Select(s => new ReservationService
+                    {
+                        ServiceId = s.Id,
+                        HotelService = s  
+                    })
                     .ToList();
             }
 
@@ -329,13 +344,31 @@ namespace Hotel_Manager.Controllers
             }
 
 
+            // Remove old services
             _context.ReservationServices.RemoveRange(existing.ReservationServices);
 
             if (serviceIds?.Any() == true)
             {
-                existing.ReservationServices = serviceIds
-                    .Select(sid => new ReservationService { ServiceId = sid })
+                var selectedServices = await _context.HotelServices
+                    .Where(s => serviceIds.Contains(s.Id))
+                    .ToListAsync();
+
+                if (selectedServices.Count != serviceIds.Count)
+                {
+                    ModelState.AddModelError("", "One or more selected services no longer exist.");
+                }
+
+                existing.ReservationServices = selectedServices
+                    .Select(s => new ReservationService
+                    {
+                        ServiceId = s.Id,
+                        HotelService = s
+                    })
                     .ToList();
+            }
+            else
+            {
+                existing.ReservationServices = new List<ReservationService>();
             }
 
             // Задължително преизчисляване на цената
