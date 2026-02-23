@@ -45,11 +45,29 @@ namespace Hotel_Manager.Controllers
         {
             await _roomAvailabilityService.AutoCompleteExpiredReservationsAsync();
 
-            var reservations = await _context.Reservations
+            IQueryable<Reservation> query = _context.Reservations
                 .Include(r => r.User)
                 .Include(r => r.ReservationRooms).ThenInclude(rr => rr.Room).ThenInclude(r => r.RoomType)
                 .Include(r => r.ReservationServices).ThenInclude(rs => rs.HotelService)
-                .ToListAsync();
+                .OrderByDescending(r => r.CreatedAt);
+
+            // Guests should see ONLY their own reservations
+            if (User.IsInRole("Guest"))
+            {
+                var currentUserId = _userManager.GetUserId(User);
+                if (string.IsNullOrEmpty(currentUserId))
+                {
+                    return RedirectToAction("Index", "Home");
+                }
+
+                query = query.Where(r => r.UserId == currentUserId);
+            }
+            // Admins & Receptionists see everything 
+
+            var reservations = await query.ToListAsync();
+         
+            ViewBag.IsGuest = User.IsInRole("Guest");
+            ViewBag.ShowCreateButton = User.IsInRole("Admin") || User.IsInRole("Receptionist");
 
             return View(reservations);
         }
@@ -90,27 +108,25 @@ namespace Hotel_Manager.Controllers
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin,Receptionist")]
         public async Task<IActionResult> Create(
-            Reservation reservation,
-            string guestEmail,
-            string firstName,
-            string lastName,
-            int? age,
-            int roomTypeId,
-            List<int>? serviceIds,
-            string? licensePlate)
+    Reservation reservation,
+    string guestEmail,
+    string firstName,
+    string lastName,
+    int? age,
+    int roomTypeId,
+    List<int>? serviceIds,
+    string? licensePlate)
         {
             if (string.IsNullOrWhiteSpace(guestEmail))
             {
-                ModelState.AddModelError("", "Email на госта е задължителен.");
+                ModelState.AddModelError("", "Guest email is required.");
                 return ReloadCreateView(reservation, roomTypeId);
             }
 
             var user = await _userManager.FindByEmailAsync(guestEmail);
-
             if (user == null)
             {
                 string generatedPassword = GenerateRandomPassword(10);
-
                 user = new ApplicationUser
                 {
                     UserName = guestEmail,
@@ -122,7 +138,6 @@ namespace Hotel_Manager.Controllers
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow
                 };
-
                 var result = await _userManager.CreateAsync(user, generatedPassword);
                 if (!result.Succeeded)
                 {
@@ -130,16 +145,14 @@ namespace Hotel_Manager.Controllers
                         ModelState.AddModelError("", error.Description);
                     return ReloadCreateView(reservation, roomTypeId);
                 }
-
                 await _userManager.AddToRoleAsync(user, "Guest");
-
                 TempData["NewGuestEmail"] = guestEmail;
                 TempData["NewGuestPassword"] = generatedPassword;
             }
 
             reservation.UserId = user.Id;
 
-            // Добавяне на автомобил 
+            // Car
             if (!string.IsNullOrWhiteSpace(licensePlate))
             {
                 var plate = licensePlate.Trim().ToUpperInvariant();
@@ -149,25 +162,25 @@ namespace Hotel_Manager.Controllers
                 }
             }
 
-            // Стая
+            // Room
             var room = await _context.Rooms
                 .Include(r => r.RoomType)
                 .FirstOrDefaultAsync(r => r.RoomTypeId == roomTypeId && r.IsAvailable);
 
             if (room == null)
             {
-                ModelState.AddModelError("", "Няма свободна стая от избрания тип.");
+                ModelState.AddModelError("", "No available room of the selected type.");
                 return ReloadCreateView(reservation, roomTypeId);
             }
 
             room.IsAvailable = false;
+            _context.Update(room);  
 
             reservation.ReservationRooms = new List<ReservationRoom>
             {
                 new ReservationRoom { RoomId = room.Id }
             };
 
-            // Услуги
             if (serviceIds?.Any() == true)
             {
                 reservation.ReservationServices = serviceIds
@@ -176,11 +189,21 @@ namespace Hotel_Manager.Controllers
             }
 
             reservation.Status = DetermineStatus(reservation.CheckInDate, reservation.CheckOutDate);
-            reservation.TotalPrice = _priceService.CalculateTotalPrice(reservation);
             reservation.CreatedAt = DateTime.UtcNow;
 
             _context.Add(reservation);
             await _context.SaveChangesAsync();
+
+            var savedReservation = await _context.Reservations
+                .Include(r => r.ReservationRooms).ThenInclude(rr => rr.Room).ThenInclude(r => r.RoomType)
+                .Include(r => r.ReservationServices).ThenInclude(rs => rs.HotelService)
+                .FirstOrDefaultAsync(r => r.Id == reservation.Id);
+
+            if (savedReservation != null)
+            {
+                savedReservation.TotalPrice = _priceService.CalculateTotalPrice(savedReservation);
+                await _context.SaveChangesAsync();
+            }
 
             return RedirectToAction(nameof(Index));
         }
