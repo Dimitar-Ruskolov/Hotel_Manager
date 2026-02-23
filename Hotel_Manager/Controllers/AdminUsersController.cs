@@ -98,21 +98,29 @@ namespace Hotel_Manager.Controllers
                 CreatedAt = DateTime.UtcNow
             };
 
-            var result = await _userManager.CreateAsync(user, model.Password);
-
-            if (result.Succeeded)
+            var createResult = await _userManager.CreateAsync(user, model.Password);
+            if (!createResult.Succeeded)
             {
-                await _userManager.AddToRoleAsync(user, model.Role);
-                return RedirectToAction(nameof(Index));
+                foreach (var error in createResult.Errors)
+                {
+                    ModelState.AddModelError(string.Empty, error.Description);
+                }
+                ViewBag.Roles = new SelectList(new[] { "Admin", "Receptionist", "Guest" });
+                return View(model);
             }
 
-            foreach (var error in result.Errors)
+            var addRoleResult = await _userManager.AddToRoleAsync(user, model.Role);
+            if (!addRoleResult.Succeeded)
             {
-                ModelState.AddModelError(string.Empty, error.Description);
+                foreach (var error in addRoleResult.Errors)
+                {
+                    ModelState.AddModelError(string.Empty, error.Description);
+                }
+                ViewBag.Roles = new SelectList(new[] { "Admin", "Receptionist", "Guest" });
+                return View(model);
             }
 
-            ViewBag.Roles = new SelectList(new[] { "Admin", "Receptionist", "Guest" });
-            return View(model);
+            return RedirectToAction(nameof(Index));
         }
 
         // GET: /AdminUsers/Edit/{id}
@@ -123,7 +131,8 @@ namespace Hotel_Manager.Controllers
             var user = await _userManager.FindByIdAsync(id);
             if (user == null) return NotFound();
 
-            var roles = await _userManager.GetRolesAsync(user);
+            var currentRoles = await _userManager.GetRolesAsync(user);
+            var currentRole = currentRoles.FirstOrDefault() ?? "";
 
             var model = new EditUserViewModel
             {
@@ -133,7 +142,8 @@ namespace Hotel_Manager.Controllers
                 LastName = user.LastName,
                 Age = user.Age,
                 IsActive = user.IsActive,
-                CurrentRole = roles.FirstOrDefault() ?? ""
+                CurrentRole = currentRole,
+                NewRole = null // Default to no change
             };
 
             ViewBag.Roles = new SelectList(new[] { "Admin", "Receptionist", "Guest" });
@@ -143,12 +153,9 @@ namespace Hotel_Manager.Controllers
         // POST: /AdminUsers/Edit/{id}
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(EditUserViewModel model, string? NewRole = null)
+        public async Task<IActionResult> Edit(string id, EditUserViewModel model)
         {
-            if (string.IsNullOrEmpty(model.Id))
-            {
-                return NotFound();
-            }
+            if (id != model.Id) return NotFound();
 
             if (!ModelState.IsValid)
             {
@@ -156,11 +163,8 @@ namespace Hotel_Manager.Controllers
                 return View(model);
             }
 
-            var user = await _userManager.FindByIdAsync(model.Id);
-            if (user == null)
-            {
-                return NotFound();
-            }
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null) return NotFound();
 
             user.FirstName = model.FirstName;
             user.LastName = model.LastName;
@@ -178,13 +182,13 @@ namespace Hotel_Manager.Controllers
                 return View(model);
             }
 
-            // Role change logic
-            if (!string.IsNullOrWhiteSpace(NewRole) && NewRole != model.CurrentRole)
+            // Handle role change
+            if (!string.IsNullOrEmpty(model.NewRole))
             {
                 var currentRoles = await _userManager.GetRolesAsync(user);
                 await _userManager.RemoveFromRolesAsync(user, currentRoles);
 
-                var addResult = await _userManager.AddToRoleAsync(user, NewRole);
+                var addResult = await _userManager.AddToRoleAsync(user, model.NewRole);
                 if (!addResult.Succeeded)
                 {
                     foreach (var error in addResult.Errors)
