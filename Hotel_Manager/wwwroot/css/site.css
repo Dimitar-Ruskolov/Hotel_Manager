@@ -20,3 +20,40 @@ html {
 body {
   margin-bottom: 60px;
 }
+.home-hero {
+    min-height: 100vh;
+    background-image: url('/images/hotelroom.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+    .home-hero::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.55);
+    }
+
+    .home-hero .container {
+        position: relative;
+        z-index: 2;
+    }
+    .glass-card{
+    background: rgba(255,255,255,0.18) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.30) !important;
+    color: white;
+}
+
+.glass-card .text-muted{
+    color: rgba(255,255,255,0.75) !important;
+}
+
+.glass-card a, .glass-card h1, .glass-card h5, .glass-card p{
+    color: white;
+}

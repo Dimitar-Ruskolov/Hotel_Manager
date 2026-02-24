@@ -1,8 +1,150 @@
 ﻿@{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "Начало";
+    ViewData["HideNavbar"] = true;
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="home-hero">
+ 
+<div class="container py-5">
+
+        <div class="card shadow-lg border-0 glass-card">
+        <div class="card-body p-5">
+            <div class="row align-items-center justify-content-center g-4">
+
+                <div class="col-lg-7">
+                    <h1 class="display-6 fw-semibold mb-2 text-center">Hotel Manager</h1>
+                    <p class="text-muted mb-4 text-center">
+                        Управление на резервации, стаи и услуги 
+                    </p>
+
+                    <div class="d-flex flex-wrap gap-2 justify-content-center">
+                        @* Not logged in *@
+                        @if (User.Identity?.IsAuthenticated != true)
+                        {
+                            <a class="btn btn-primary btn-lg" asp-area="Identity" asp-page="/Account/Login">Вход</a>
+                            <a class="btn btn-outline-secondary btn-lg" asp-area="Identity" asp-page="/Account/Register">Регистрация</a>
+                        }
+                        else
+                        {
+                            @* Admin *@
+                            if (User.IsInRole("Admin"))
+                            {
+                                <a class="btn btn-primary btn-lg" asp-controller="Reservations" asp-action="Index">Всички резервации</a>
+                            }
+
+                            @* Receptionist *@
+                            else if (User.IsInRole("Receptionist"))
+                            {
+                                <a class="btn btn-primary btn-lg" asp-controller="Reservations" asp-action="Index">Всички резервации</a>
+                            }
+
+                            @* Guest *@
+                            else if (User.IsInRole("Guest"))
+                            {
+                                <a class="btn btn-primary btn-lg" asp-controller="Reservations" asp-action="Index">Моите резервации</a>
+                                ViewData["Title"] = User.IsInRole("Guest") ? "My Reservations" : "Reservations";
+                            }
+                        }
+                    </div>
+                </div>
+
+                @* Right-side summary block: ONLY for Receptionist *@
+                @if (User.Identity?.IsAuthenticated == true && User.IsInRole("Receptionist"))
+                {
+                    <div class="col-lg-5">
+                        <div class="p-4 rounded-4 bg-light">
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <div class="fw-semibold">Днес</div>
+                                @* махаме статус/бейджове – оставяме само заглавие *@
+                            </div>
+
+                            <div class="row g-3">
+                                <div class="col-6">
+                                    <div class="border rounded-3 p-3 bg-white">
+                                        <div class="text-muted small">Резервации</div>
+                                        <div class="fs-4 fw-semibold">—</div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="border rounded-3 p-3 bg-white">
+                                        <div class="text-muted small">Свободни стаи</div>
+                                        <div class="fs-4 fw-semibold">—</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            
+                        </div>
+                    </div>
+                }
+
+            </div>
+        </div>
+    </div>
+
+    @* Admin quick links (replaces the old 3 cards) *@
+    @if (User.Identity?.IsAuthenticated == true && User.IsInRole("Admin"))
+    {
+        <div class="row g-3">
+            <div class="col-6">
+                <div class="border rounded-3 p-3 bg-white">
+                    <div class="text-muted small">Резервации</div>
+                    <div class="fs-4 fw-semibold">—</div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="border rounded-3 p-3 bg-white">
+                    <div class="text-muted small">Свободни стаи</div>
+                    <div class="fs-4 fw-semibold">—</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4 mt-4">
+            <div class="col-md-3">
+                <a class="text-decoration-none" asp-controller="Rooms" asp-action="Index">
+                        <div class="card h-100 shadow-sm border-0 glass-card">
+                        <div class="card-body">
+                            <h5 class="mb-1">Rooms</h5>
+                            <div class="text-muted small">Управление на стаи</div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <div class="col-md-3">
+                <a class="text-decoration-none" asp-controller="RoomTypes" asp-action="Index">
+                        <div class="card h-100 shadow-sm border-0 glass-card">
+                        <div class="card-body">
+                            <h5 class="mb-1">Room Types</h5>
+                            <div class="text-muted small">Типове стаи и цени</div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <div class="col-md-3">
+                <a class="text-decoration-none" asp-controller="HotelServices" asp-action="Index">
+                        <div class="card h-100 shadow-sm border-0 glass-card">
+                        <div class="card-body">
+                            <h5 class="mb-1">Services</h5>
+                            <div class="text-muted small">Amenities / услуги</div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <div class="col-md-3">
+                <a class="text-decoration-none" asp-controller="AdminUsers" asp-action="Index">
+                        <div class="card h-100 shadow-sm border-0 glass-card">
+                        <div class="card-body">
+                            <h5 class="mb-1">Users</h5>
+                            <div class="text-muted small">Потребители и роли</div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+    }
+    </div>
 </div>
