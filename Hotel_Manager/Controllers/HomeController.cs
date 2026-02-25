@@ -3,6 +3,7 @@ using Hotel_Manager.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Hotel_Manager.Controllers
 {
@@ -45,6 +46,22 @@ namespace Hotel_Manager.Controllers
         public IActionResult Error()
         {
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+        }
+        [AllowAnonymous]
+        public async Task<IActionResult> Pricing()
+        {
+            ViewData["Title"] = "Цени";
+            ViewData["HideNavbar"] = true;
+
+            ViewBag.RoomTypes = await _context.RoomTypes
+                .OrderBy(rt => rt.PricePerNight)
+                .ToListAsync();
+
+            ViewBag.Services = await _context.HotelServices
+                .OrderBy(s => s.Price)
+                .ToListAsync();
+
+            return View();
         }
     }
 }

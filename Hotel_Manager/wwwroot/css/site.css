@@ -57,3 +57,9 @@ body {
 .glass-card a, .glass-card h1, .glass-card h5, .glass-card p{
     color: white;
 }
+.pricing-glass {
+    background: rgba(255,255,255,0.14);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.22);
+}

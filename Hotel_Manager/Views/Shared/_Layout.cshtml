@@ -10,6 +10,11 @@
 </head>
 <body>
     <header>
+        @{
+            var isHomeIndex =
+            ViewContext.RouteData.Values["controller"]?.ToString() == "Home" &&
+            (ViewContext.RouteData.Values["action"]?.ToString() == "Index" || ViewContext.RouteData.Values["action"]?.ToString() == "Pricing");
+        }
         @if (ViewData["HideNavbar"] == null)
             {
                 <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
@@ -26,6 +31,9 @@
                                 </li>
                                 <li class="nav-item">
                                     <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Pricing">Pricing</a>
                                 </li>
                                 @if (User.IsInRole("Admin"))
                                 {
@@ -55,7 +63,7 @@
                 </nav>                
             }
         </header>
-    @if (ViewData["HideNavbar"] as bool? == true)
+    @if (isHomeIndex)
     {
         @RenderBody()
     }

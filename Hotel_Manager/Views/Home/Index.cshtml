@@ -1,6 +1,6 @@
 ﻿@{
     ViewData["Title"] = "Начало";
-    ViewData["HideNavbar"] = true;
+    ViewData["HideNavbar"] = !User.Identity.IsAuthenticated;
 }
 
 <div class="home-hero">
@@ -23,13 +23,14 @@
                         {
                             <a class="btn btn-primary btn-lg" asp-area="Identity" asp-page="/Account/Login">Вход</a>
                             <a class="btn btn-outline-secondary btn-lg" asp-area="Identity" asp-page="/Account/Register">Регистрация</a>
+                            <a class="btn btn-outline-secondary btn-lg" asp-controller="Home" asp-action="Pricing">Виж цени</a>
                         }
                         else
                         {
                             @* Admin *@
                             if (User.IsInRole("Admin"))
                             {
-                                    <a class="btn btn-primary btn-lg text-center" asp-controller="Reservations" asp-action="Index">Всички резервации</a>
+                                <a class="btn btn-primary btn-lg text-center" asp-controller="Reservations" asp-action="Index">Всички резервации</a>
                             }
 
                             @* Receptionist *@
@@ -43,6 +44,7 @@
                             {
                                 <a class="btn btn-primary btn-lg" asp-controller="Reservations" asp-action="Index">Моите резервации</a>
                                 ViewData["Title"] = User.IsInRole("Guest") ? "My Reservations" : "Reservations";
+                                <a class="btn btn-outline-secondary btn-lg" asp-controller="Home" asp-action="Pricing">Виж цени</a>
                             }
                         }
                     </div>
