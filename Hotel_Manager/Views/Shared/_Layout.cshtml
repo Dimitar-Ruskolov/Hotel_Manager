@@ -30,11 +30,14 @@
                                     <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-                                </li>
-                                <li class="nav-item">
                                     <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Pricing">Pricing</a>
                                 </li>
+                                @if (User.IsInRole("Admin") || User.IsInRole("Receptionist") || User.IsInRole("Guest"))
+                                {
+                                    <li class="nav-item">
+                                        <a class="nav-link text-dark" asp-area="" asp-controller="Reservations" asp-action="Index">@(        User.IsInRole("Guest") ? "My Reservations" : "Reservations")</a>
+                                    </li>
+                                }
                                 @if (User.IsInRole("Admin"))
                                 {
                                     <li class="nav-item">
@@ -48,12 +51,6 @@
                                     </li>
                                     <li class="nav-item">
                                         <a class="nav-link text-dark" asp-area="" asp-controller="AdminUsers" asp-action="Index">Users</a>
-                                    </li>
-                                }
-                                @if (User.IsInRole("Admin") || User.IsInRole("Receptionist") || User.IsInRole("Guest"))
-                                {
-                                    <li class="nav-item">
-                                        <a class="nav-link text-dark" asp-area="" asp-controller="Reservations" asp-action="Index">@(        User.IsInRole("Guest") ? "My Reservations" : "Reservations")</a>
                                     </li>
                                 }
                             </ul>
