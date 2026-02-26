@@ -32,6 +32,26 @@ namespace Hotel_Manager.Areas.Identity.Pages.Account.Manage
         /// </summary>
         public string Username { get; set; }
 
+        public string Email { get; set; }
+
+        [Display(Name = "First Name")]
+        public string FirstName { get; set; }
+
+        [Display(Name = "Last Name")]
+        public string LastName { get; set; }
+
+        [Display(Name = "Age")]
+        public int Age { get; set; }
+
+        [Display(Name = "Account Created")]
+        public DateTime CreatedAt { get; set; }
+
+        [Display(Name = "Status")]
+        public bool IsActive { get; set; }
+
+        [Display(Name = "Roles")]
+        public string Roles { get; set; }
+
         /// <summary>
         ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
         ///     directly from your code. This API may change or be removed in future releases.
@@ -64,9 +84,21 @@ namespace Hotel_Manager.Areas.Identity.Pages.Account.Manage
         private async Task LoadAsync(ApplicationUser user)
         {
             var userName = await _userManager.GetUserNameAsync(user);
+            var email = await _userManager.GetEmailAsync(user);
             var phoneNumber = await _userManager.GetPhoneNumberAsync(user);
 
             Username = userName;
+            Email = email;
+
+            FirstName = user.FirstName;
+            LastName = user.LastName;
+            Age = user.Age;
+            CreatedAt = user.CreatedAt;
+            IsActive = user.IsActive;
+
+            // Load roles 
+            var roles = await _userManager.GetRolesAsync(user);
+            Roles = string.Join(", ", roles);
 
             Input = new InputModel
             {

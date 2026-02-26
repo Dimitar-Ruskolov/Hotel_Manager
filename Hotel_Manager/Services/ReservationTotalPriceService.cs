@@ -12,8 +12,15 @@ namespace Hotel_Manager.Services
                // throw new ArgumentNullException(nameof(reservation));
 
             var nights = (reservation.CheckOutDate.Date - reservation.CheckInDate.Date).Days;
+            // if (nights <= 0)
+            //   throw new InvalidOperationException("Invalid reservation dates.");
+
             if (nights <= 0)
-                throw new InvalidOperationException("Invalid reservation dates.");
+            {
+                // Same day or invalid → only charge services (or return 0)
+                return reservation.ReservationServices
+                    ?.Sum(rs => rs.HotelService?.Price ?? 0) ?? 0m;
+            }
 
             var roomsPerNight = reservation.ReservationRooms
                 ?.Sum(rr => rr.Room?.RoomType?.PricePerNight ?? 0) ?? 0;
