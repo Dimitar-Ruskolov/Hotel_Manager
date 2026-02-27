@@ -9,7 +9,7 @@ namespace HotelManager.Tests.Services
     [TestFixture]
     public class ReservationTotalPriceServiceTests
     {
-        private ReservationTotalPriceService _service;
+        private ReservationTotalPriceService _service = null!;
 
         [SetUp]
         public void Setup()
@@ -18,68 +18,79 @@ namespace HotelManager.Tests.Services
         }
 
         [Test]
-        public void CalculateTotalPrice_ValidStayWithMultipleRoomsAndServices_ReturnsCorrectSum()
+        public void CalculateTotalPrice_NormalValidStay_ReturnsRoomsPlusServices()
         {
-            var reservation = new Reservation
-            {
-                CheckInDate = new DateTime(2026, 5, 1),
-                CheckOutDate = new DateTime(2026, 5, 4),
-                ReservationRooms = new List<ReservationRoom>
-                {
-                    new() { Room = new Room { RoomType = new RoomType { PricePerNight = 100m } } },
-                    new() { Room = new Room { RoomType = new RoomType { PricePerNight = 150m } } }
-                },
-                ReservationServices = new List<ReservationService>
-                {
-                    new() { HotelService = new HotelService { Price = 40m } },
-                    new() { HotelService = new HotelService { Price = 25m } }
-                },
-                UserId = "user-test"
-            };
+            var reservation = CreateReservation(
+                checkIn: new DateTime(2026, 3, 10),
+                checkOut: new DateTime(2026, 3, 15),
+                roomPricePerNight: 120m,
+                servicePrices: new[] { 30m, 25m }
+            );
 
             var price = _service.CalculateTotalPrice(reservation);
 
-            Assert.That(price, Is.EqualTo(815m));
+            Assert.That(price, Is.EqualTo(655m));
         }
 
         [Test]
-        public void CalculateTotalPrice_NoRoomsOnlyServices_ReturnsServicesTotal()
+        public void CalculateTotalPrice_MultipleRoomsAndServices_ReturnsCorrectSum()
         {
-            var reservation = new Reservation
+            var reservation = CreateReservation(
+                checkIn: new DateTime(2026, 4, 1),
+                checkOut: new DateTime(2026, 4, 4),
+                roomPricePerNight: 100m,
+                servicePrices: new[] { 40m }
+            );
+
+            reservation.ReservationRooms.Add(new ReservationRoom
             {
-                CheckInDate = new DateTime(2026, 6, 10),
-                CheckOutDate = new DateTime(2026, 6, 13),
-                ReservationServices = new List<ReservationService>
-                {
-                    new() { HotelService = new HotelService { Price = 30m } }
-                },
-                UserId = "user-test"
-            };
+                Room = new Room { RoomType = new RoomType { PricePerNight = 80m } }
+            });
 
             var price = _service.CalculateTotalPrice(reservation);
 
-            Assert.That(price, Is.EqualTo(30m));
+            Assert.That(price, Is.EqualTo(580m));
         }
 
         [Test]
-        public void CalculateTotalPrice_NoServicesOnlyRooms_ReturnsRoomTotal()
+        public void CalculateTotalPrice_SameDay_ReturnsServicesTotalOnly()
         {
-            var reservation = CreateValidReservation(4, 90m, Array.Empty<decimal>());
+            var reservation = CreateReservation(
+                checkIn: new DateTime(2026, 5, 5),
+                checkOut: new DateTime(2026, 5, 5),
+                roomPricePerNight: 0m,
+                servicePrices: new[] { 50m, 20m }
+            );
 
             var price = _service.CalculateTotalPrice(reservation);
 
-            Assert.That(price, Is.EqualTo(360m));
+            Assert.That(price, Is.EqualTo(70m));
         }
 
         [Test]
-        public void CalculateTotalPrice_ZeroNights_ReturnsZero()
+        public void CalculateTotalPrice_CheckOutBeforeCheckIn_ReturnsServicesTotalOnly()
         {
-            var reservation = new Reservation
-            {
-                CheckInDate = new DateTime(2026, 7, 1),
-                CheckOutDate = new DateTime(2026, 7, 1),
-                UserId = "user-test"
-            };
+            var reservation = CreateReservation(
+                checkIn: new DateTime(2026, 6, 10),
+                checkOut: new DateTime(2026, 6, 5),
+                roomPricePerNight: 0m,
+                servicePrices: new[] { 15m }
+            );
+
+            var price = _service.CalculateTotalPrice(reservation);
+
+            Assert.That(price, Is.EqualTo(15m));
+        }
+
+        [Test]
+        public void CalculateTotalPrice_NoServicesAndInvalidDates_ReturnsZero()
+        {
+            var reservation = CreateReservation(
+                checkIn: new DateTime(2026, 7, 1),
+                checkOut: new DateTime(2026, 7, 1),
+                roomPricePerNight: 200m,
+                servicePrices: Array.Empty<decimal>()
+            );
 
             var price = _service.CalculateTotalPrice(reservation);
 
@@ -87,13 +98,30 @@ namespace HotelManager.Tests.Services
         }
 
         [Test]
-        public void CalculateTotalPrice_NegativeNights_ReturnsZero()
+        public void CalculateTotalPrice_NoRoomsNoServicesValidDates_ReturnsZero()
+        {
+            var reservation = CreateReservation(
+                checkIn: new DateTime(2026, 8, 1),
+                checkOut: new DateTime(2026, 8, 5),
+                roomPricePerNight: 0m,
+                servicePrices: Array.Empty<decimal>()
+            );
+            reservation.ReservationRooms.Clear();
+
+            var price = _service.CalculateTotalPrice(reservation);
+
+            Assert.That(price, Is.EqualTo(0m));
+        }
+
+        [Test]
+        public void CalculateTotalPrice_NullCollectionsHandledSafely_ReturnsZero()
         {
             var reservation = new Reservation
             {
-                CheckInDate = new DateTime(2026, 7, 10),
-                CheckOutDate = new DateTime(2026, 7, 5),
-                UserId = "user-test"
+                CheckInDate = new DateTime(2026, 9, 1),
+                CheckOutDate = new DateTime(2026, 9, 6),
+                ReservationRooms = null,
+                ReservationServices = null
             };
 
             var price = _service.CalculateTotalPrice(reservation);
@@ -101,28 +129,29 @@ namespace HotelManager.Tests.Services
             Assert.That(price, Is.EqualTo(0m));
         }
 
-        private Reservation CreateValidReservation(int nights, decimal roomPrice, decimal[] servicePrices)
+        private Reservation CreateReservation(DateTime checkIn, DateTime checkOut, decimal roomPricePerNight, decimal[] servicePrices)
         {
-            var checkIn = new DateTime(2026, 3, 10);
-            var checkOut = checkIn.AddDays(nights);
-
-            var rooms = new List<ReservationRoom>
-            {
-                new ReservationRoom { Room = new Room { RoomType = new RoomType { PricePerNight = roomPrice } } }
-            };
-
-            var services = new List<ReservationService>();
-            foreach (var price in servicePrices)
-                services.Add(new ReservationService { HotelService = new HotelService { Price = price } });
-
-            return new Reservation
+            var reservation = new Reservation
             {
                 CheckInDate = checkIn,
                 CheckOutDate = checkOut,
-                ReservationRooms = rooms,
-                ReservationServices = services,
-                UserId = "dummy-user-id"
+                UserId = "test-user",
+                ReservationRooms = new List<ReservationRoom>
+                {
+                    new() { Room = new Room { RoomType = new RoomType { PricePerNight = roomPricePerNight } } }
+                },
+                ReservationServices = new List<ReservationService>()
             };
+
+            foreach (var price in servicePrices)
+            {
+                reservation.ReservationServices.Add(new ReservationService
+                {
+                    HotelService = new HotelService { Price = price }
+                });
+            }
+
+            return reservation;
         }
     }
 }
