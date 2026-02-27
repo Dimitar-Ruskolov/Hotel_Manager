@@ -98,7 +98,6 @@ namespace Hotel_Manager.Tests.Controllers
         {
             using var context = CreateDb();
 
-            // Seed users + room type/room, за да има join-и
             var u1 = new ApplicationUser { Id = "u1", UserName = "u1@test.com", Email = "u1@test.com", FirstName = "A", LastName = "B", Age = 18, IsActive = true };
             var u2 = new ApplicationUser { Id = "u2", UserName = "u2@test.com", Email = "u2@test.com", FirstName = "C", LastName = "D", Age = 18, IsActive = true };
             context.Users.AddRange(u1, u2);
@@ -208,7 +207,6 @@ namespace Hotel_Manager.Tests.Controllers
         {
             using var context = CreateDb();
 
-            // Seed room type но НЯМА available room
             context.RoomTypes.Add(new RoomType { Id = 1, Name = "Standard", PricePerNight = 100m });
             await context.SaveChangesAsync();
 
@@ -216,7 +214,7 @@ namespace Hotel_Manager.Tests.Controllers
             var roomAvailability = new RoomAvailabilityService(context);
 
             var userManager = CreateMockUserManager();
-            // guest exists
+
             var guest = new ApplicationUser { Id = "g1", UserName = "g@test.com", Email = "g@test.com", FirstName = "G", LastName = "U", Age = 18, IsActive = true };
             userManager.Setup(um => um.FindByEmailAsync("g@test.com")).ReturnsAsync(guest);
 
@@ -258,13 +256,11 @@ namespace Hotel_Manager.Tests.Controllers
         {
             using var context = CreateDb();
 
-            // Room type + available room
             var rt = new RoomType { Id = 1, Name = "Standard", PricePerNight = 100m };
             var room = new Room { Id = 1, RoomNumber = "101", RoomTypeId = 1, IsAvailable = true };
             context.RoomTypes.Add(rt);
             context.Rooms.Add(room);
 
-            // service optional
             context.HotelServices.Add(new HotelService { Id = 1, Name = "Breakfast", Price = 10m });
 
             await context.SaveChangesAsync();
@@ -274,7 +270,6 @@ namespace Hotel_Manager.Tests.Controllers
 
             var userManager = CreateMockUserManager();
 
-            // user does not exist -> CreateAsync will be called
             userManager.Setup(um => um.FindByEmailAsync("new@test.com")).ReturnsAsync((ApplicationUser?)null);
             userManager.Setup(um => um.CreateAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>()))
                 .ReturnsAsync(IdentityResult.Success);
@@ -520,7 +515,6 @@ namespace Hotel_Manager.Tests.Controllers
             context.Rooms.Add(room);
             context.Reservations.Add(reservation);
 
-            // ВАЖНО: ако при теб резервацията винаги има join към Room
             context.ReservationRooms.Add(new ReservationRoom
             {
                 ReservationId = 1,
@@ -531,7 +525,6 @@ namespace Hotel_Manager.Tests.Controllers
 
             await context.SaveChangesAsync();
 
-            // Detach tracked entities, за да няма tracking конфликт при Update()
             context.ChangeTracker.Clear();
 
             var price = new ReservationTotalPriceService();
@@ -552,7 +545,6 @@ namespace Hotel_Manager.Tests.Controllers
 
             var result = await controller.Edit(1, edited, roomTypeId: 1, serviceIds: null);
 
-            // Ако пак върне View, покажи ми грешките (ще ги видиш директно в тест output)
             if (result is ViewResult)
             {
                 var errors = string.Join(" | ",
@@ -790,7 +782,6 @@ namespace Hotel_Manager.Tests.Controllers
             context.Rooms.Add(room);
             context.Reservations.Add(reservation);
 
-            // ако Edit GET прави Include към ReservationRooms/RoomType и т.н.
             context.ReservationRooms.Add(new ReservationRoom
             {
                 ReservationId = 1,
@@ -815,7 +806,6 @@ namespace Hotel_Manager.Tests.Controllers
 
             Assert.Multiple(() =>
             {
-                // тези ключове може да са ViewData или ViewBag – проверяваме по-общо
                 Assert.That(controller.ViewData.Count, Is.GreaterThan(0));
             });
         }
@@ -912,7 +902,7 @@ namespace Hotel_Manager.Tests.Controllers
     {
         using var context = CreateDb();
 
-        // 1 room type + 1 available room => да се появи в dropdown
+
         context.RoomTypes.Add(new RoomType { Id = 1, Name = "Standard", PricePerNight = 100m });
         context.Rooms.Add(new Room { Id = 1, RoomNumber = "101", RoomTypeId = 1, IsAvailable = true });
 
@@ -954,13 +944,11 @@ namespace Hotel_Manager.Tests.Controllers
             };
             context.Users.Add(user);
 
-            // RT1 има available стая -> ще е в availableRoomTypes
             var rt1 = new RoomType { Id = 1, Name = "Standard", PricePerNight = 100m };
             var room1 = new Room { Id = 1, RoomNumber = "101", RoomTypeId = 1, IsAvailable = true };
             context.RoomTypes.Add(rt1);
             context.Rooms.Add(room1);
 
-            // RT2 няма available стаи и е текущият тип на резервацията -> controller трябва да го добави ръчно в SelectList
             var rt2 = new RoomType { Id = 2, Name = "Deluxe", PricePerNight = 200m };
             var room2 = new Room { Id = 2, RoomNumber = "202", RoomTypeId = 2, IsAvailable = false };
             context.RoomTypes.Add(rt2);
@@ -979,7 +967,6 @@ namespace Hotel_Manager.Tests.Controllers
             };
             context.Reservations.Add(reservation);
 
-            // Важно: НЕ query-ваме context.Rooms.First(...) преди SaveChanges
             context.ReservationRooms.Add(new ReservationRoom
             {
                 ReservationId = reservation.Id,
@@ -1033,13 +1020,11 @@ public async Task Edit_Get_WhenCurrentRoomTypeIsNotAvailable_IncludesItInSelectL
             };
             context.Users.Add(user);
 
-            // RT1 има available стая -> ще е в availableRoomTypes
             var rt1 = new RoomType { Id = 1, Name = "Standard", PricePerNight = 100m };
             var room1 = new Room { Id = 1, RoomNumber = "101", RoomTypeId = 1, IsAvailable = true };
             context.RoomTypes.Add(rt1);
             context.Rooms.Add(room1);
 
-            // RT2 няма available стаи и е текущият тип на резервацията -> controller трябва да го добави ръчно в SelectList
             var rt2 = new RoomType { Id = 2, Name = "Deluxe", PricePerNight = 200m };
             var room2 = new Room { Id = 2, RoomNumber = "202", RoomTypeId = 2, IsAvailable = false };
             context.RoomTypes.Add(rt2);
@@ -1058,7 +1043,6 @@ public async Task Edit_Get_WhenCurrentRoomTypeIsNotAvailable_IncludesItInSelectL
             };
             context.Reservations.Add(reservation);
 
-            // Важно: НЕ query-ваме context.Rooms.First(...) преди SaveChanges
             context.ReservationRooms.Add(new ReservationRoom
             {
                 ReservationId = reservation.Id,
@@ -1112,19 +1096,16 @@ public async Task Edit_Get_WhenCurrentRoomTypeIsNotAvailable_IncludesItInSelectL
             };
             context.Users.Add(user);
 
-            // RT1 има available стая (ще е в availableRoomTypes)
             var rt1 = new RoomType { Id = 1, Name = "Standard", PricePerNight = 100m };
             var room1 = new Room { Id = 1, RoomNumber = "101", RoomTypeId = 1, IsAvailable = true };
             context.RoomTypes.Add(rt1);
             context.Rooms.Add(room1);
 
-            // RT2 няма available стаи и е текущият тип
             var rt2 = new RoomType { Id = 2, Name = "Deluxe", PricePerNight = 200m };
             var room2 = new Room { Id = 2, RoomNumber = "202", RoomTypeId = 2, IsAvailable = false };
             context.RoomTypes.Add(rt2);
             context.Rooms.Add(room2);
 
-            // 1 валидна услуга в БД (но ние ще подадем НЕвалидна, за да fail-не update-a)
             context.HotelServices.Add(new HotelService { Id = 1, Name = "Breakfast", Price = 10m });
 
             var reservation = new Reservation
@@ -1158,7 +1139,6 @@ public async Task Edit_Get_WhenCurrentRoomTypeIsNotAvailable_IncludesItInSelectL
             var controller = new ReservationsController(context, price, userManager.Object, roomAvailability, logic);
             SetUser(controller, "admin", "Admin");
 
-            // Правим update да FAIL-не: подаваме несъществуващ serviceId (999)
             var edited = new Reservation
             {
                 Id = 1,

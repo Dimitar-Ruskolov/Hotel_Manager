@@ -45,10 +45,8 @@ namespace Hotel_Manager.Tests.Controllers
 
             var controller = new RoomsController(context, mockAvailabilityService.Object);
 
-            // Act
             var result = await controller.Index();
 
-            // Assert
             Assert.That(result, Is.TypeOf<ViewResult>());
 
             var viewResult = result as ViewResult;
@@ -309,7 +307,6 @@ namespace Hotel_Manager.Tests.Controllers
             context.Rooms.Add(originalRoom);
             await context.SaveChangesAsync();
 
-            // МНОГО ВАЖНО – махаме tracking-а
             context.Entry(originalRoom).State = EntityState.Detached;
 
             var service = new RoomAvailabilityService(context);
@@ -361,7 +358,6 @@ namespace Hotel_Manager.Tests.Controllers
             var service = new RoomAvailabilityService(context);
             var controller = new RoomsController(context, service);
 
-            // изтриваме стаята преди update
             context.Rooms.Remove(room);
             await context.SaveChangesAsync();
 
@@ -514,7 +510,6 @@ namespace Hotel_Manager.Tests.Controllers
 
             using var context = new ApplicationDbContext(options);
 
-            // имаме само RoomType с Id=1, но ще подадем 999
             context.RoomTypes.Add(new RoomType { Id = 1, Name = "Standard" });
             await context.SaveChangesAsync();
 
@@ -629,7 +624,6 @@ namespace Hotel_Manager.Tests.Controllers
 
             var service = new RoomAvailabilityService(context);
 
-            // sanity check: наистина да е locked
             var locked = await service.IsRoomLockedAsync(room.Id);
             Assert.That(locked, Is.True);
 
@@ -719,13 +713,11 @@ namespace Hotel_Manager.Tests.Controllers
         [Test]
         public async Task Edit_Post_WhenConcurrencyExceptionAndRoomStillExists_ShouldRethrow()
         {
-            // Arrange
             var dbName = Guid.NewGuid().ToString();
             var options = new DbContextOptionsBuilder<ApplicationDbContext>()
                 .UseInMemoryDatabase(dbName)
                 .Options;
 
-            // Seed with NORMAL context (за да можем да записваме)
             using (var seedContext = new ApplicationDbContext(options))
             {
                 seedContext.RoomTypes.Add(new RoomType { Id = 1, Name = "Standard" });
@@ -738,7 +730,7 @@ namespace Hotel_Manager.Tests.Controllers
                 await seedContext.SaveChangesAsync();
             }
 
-            // Use THROWING context for controller call
+
             using var context = new ThrowingApplicationDbContext(options);
             var service = new RoomAvailabilityService(context);
             var controller = new RoomsController(context, service);
@@ -750,7 +742,7 @@ namespace Hotel_Manager.Tests.Controllers
                 RoomTypeId = 1
             };
 
-            // Act + Assert (точно rethrow branch-а)
+
             Assert.ThrowsAsync<DbUpdateConcurrencyException>(async () =>
                 await controller.Edit(1, editedRoom));
         }

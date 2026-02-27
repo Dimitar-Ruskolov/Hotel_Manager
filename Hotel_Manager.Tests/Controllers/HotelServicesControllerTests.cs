@@ -48,6 +48,7 @@ namespace HotelManager.Tests.Controllers
         {
             _context?.Database.EnsureDeleted();
             _context?.Dispose();
+            _controller?.Dispose();
         }
 
         [Test]
