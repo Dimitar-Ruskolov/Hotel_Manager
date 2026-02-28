@@ -2,9 +2,12 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Migrations;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Hotel_Manager.Data;
 
+[ExcludeFromCodeCoverage]
 public class Hotel_ManagerContext : IdentityDbContext<ApplicationUser>
 {
     public Hotel_ManagerContext(DbContextOptions<Hotel_ManagerContext> options)

@@ -6,6 +6,8 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using System.Diagnostics.CodeAnalysis;
+
 
 #nullable disable
 
@@ -13,6 +15,7 @@ namespace Hotel_Manager.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
     [Migration("20260220215250_IdentityFix")]
+    [ExcludeFromCodeCoverage]
     partial class IdentityFix
     {
         /// <inheritdoc />
