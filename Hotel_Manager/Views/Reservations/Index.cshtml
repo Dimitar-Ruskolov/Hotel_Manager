@@ -8,8 +8,33 @@
 
 @if (ViewBag.ShowCreateButton == true)
 {
+    <div class="row mb-4 align-items-end">
+        <div class="col-md-5">
+            <label class="form-label text-muted"> Search reservations</label>
+            <input type="text" id="searchInput" class="form-control"
+                   placeholder="Guest name, room number, or date..." onkeyup="filterReservationsTable()">
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label text-muted">Status</label>
+            <select id="statusFilter" class="form-select" onchange="filterReservationsTable()">
+                <option value="">All Statuses</option>
+                <option value="Upcoming">Upcoming</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Completed">Completed</option>
+                <option value="Cancelled">Cancelled</option>
+            </select>
+        </div>
+
+        <div class="col-md-2 d-flex align-items-end">
+            <button onclick="resetReservationFilters()" class="btn btn-outline-secondary w-100">
+                Reset Filters
+            </button>
+        </div>
+    </div>
+
     <p>
-        <a asp-action="Create" class="btn btn-success ">Create New Reservation</a>
+        <a asp-action="Create" class="btn btn-success">Create New Reservation</a>
     </p>
 }
 
@@ -22,7 +47,7 @@
             <strong>Generated Password:</strong>
             <code class="bg-light p-2 border">@TempData["NewGuestPassword"]</code>
         </p>
-        <small class="text-danger">This password is shown only once! Save it securely.</small>
+        <small class="text-danger">This password is shown only once! Save it and give it to the GUEST!</small>
     </div>
 }
 
@@ -34,7 +59,7 @@
 }
 else
 {
-    <table class="table table-striped">
+    <table id="reservationsTable" class="table table-striped">
         <thead>
             <tr>
                 <th>Guest</th>
@@ -65,9 +90,7 @@ else
                     <td>
                         @foreach (var rr in item.ReservationRooms)
                         {
-                            <div>
-                                @rr.Room?.RoomNumber (@rr.Room?.RoomType?.Name)
-                            </div>
+                            <div>@rr.Room?.RoomNumber (@rr.Room?.RoomType?.Name)</div>
                         }
                     </td>
                     <td>@item.TotalPrice.ToString("C")</td>
@@ -87,4 +110,42 @@ else
             }
         </tbody>
     </table>
+}
+
+@section Scripts {
+    @if (ViewBag.ShowCreateButton == true)
+    {
+        <script>
+            function filterReservationsTable() {
+                const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+                const selectedStatus = document.getElementById('statusFilter').value;
+
+                const rows = document.querySelectorAll('#reservationsTable tbody tr');
+
+                rows.forEach(row => {
+                    const guest   = row.cells[0].textContent.toLowerCase();
+                    const checkIn = row.cells[1].textContent.toLowerCase();
+                    const checkOut= row.cells[2].textContent.toLowerCase();
+                    const rooms   = row.cells[3].textContent.toLowerCase();
+                    const status  = row.cells[5].textContent.trim();
+
+                    const matchesSearch = !searchTerm ||
+                        guest.includes(searchTerm) ||
+                        rooms.includes(searchTerm) ||
+                        checkIn.includes(searchTerm) ||
+                        checkOut.includes(searchTerm);
+
+                    const matchesStatus = !selectedStatus || status === selectedStatus;
+
+                    row.style.display = (matchesSearch && matchesStatus) ? '' : 'none';
+                });
+            }
+
+            function resetReservationFilters() {
+                document.getElementById('searchInput').value = '';
+                document.getElementById('statusFilter').value = '';
+                filterReservationsTable();
+            }
+        </script>
+    }
 }
