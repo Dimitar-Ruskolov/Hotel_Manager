@@ -6,11 +6,44 @@
 
 <h1>Users</h1>
 
+<div class="row mb-4 align-items-end">
+    <div class="col-md-5">
+        <label class="form-label text-muted"> Search users</label>
+        <input type="text" id="searchInput" class="form-control"
+               placeholder="Email, name, or role..." onkeyup="filterUsersTable()">
+    </div>
+
+    <div class="col-md-3">
+        <label class="form-label text-muted">Role</label>
+        <select id="roleFilter" class="form-select" onchange="filterUsersTable()">
+            <option value="">All Roles</option>
+            <option value="Admin">Admin</option>
+            <option value="Receptionist">Receptionist</option>
+            <option value="Guest">Guest</option>
+        </select>
+    </div>
+
+    <div class="col-md-2">
+        <label class="form-label text-muted">Status</label>
+        <select id="activeFilter" class="form-select" onchange="filterUsersTable()">
+            <option value="">All</option>
+            <option value="Yes">Active</option>
+            <option value="No">Inactive</option>
+        </select>
+    </div>
+
+    <div class="col-md-2 d-flex align-items-end">
+        <button onclick="resetUserFilters()" class="btn btn-outline-secondary w-100">
+            Reset Filters
+        </button>
+    </div>
+</div>
+
 <p>
     <a asp-action="Create" class="btn btn-success">Create New User</a>
 </p>
 
-<table class="table table-striped">
+<table id="usersTable" class="table table-striped">
     <thead>
         <tr>
             <th>Email</th>
@@ -41,3 +74,41 @@
         }
     </tbody>
 </table>
+
+@section Scripts {
+    <script>
+        function filterUsersTable() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+            const selectedRole = document.getElementById('roleFilter').value.toLowerCase();
+            const selectedActive = document.getElementById('activeFilter').value;
+
+            const rows = document.querySelectorAll('#usersTable tbody tr');
+
+            rows.forEach(row => {
+                const email     = row.cells[0].textContent.toLowerCase();
+                const firstName = row.cells[1].textContent.toLowerCase();
+                const lastName  = row.cells[2].textContent.toLowerCase();
+                const fullName  = (firstName + " " + lastName).trim();
+                const roles     = row.cells[5].textContent.toLowerCase();
+                const active    = row.cells[4].textContent.trim();
+
+                const matchesSearch = !searchTerm ||
+                    email.includes(searchTerm) ||
+                    fullName.includes(searchTerm) ||
+                    roles.includes(searchTerm);
+
+                const matchesRole = !selectedRole || roles.includes(selectedRole);
+                const matchesActive = !selectedActive || active === selectedActive;
+
+                row.style.display = (matchesSearch && matchesRole && matchesActive) ? '' : 'none';
+            });
+        }
+
+        function resetUserFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('roleFilter').value = '';
+            document.getElementById('activeFilter').value = '';
+            filterUsersTable();
+        }
+    </script>
+}
