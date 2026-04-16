@@ -1,73 +1,41 @@
 ﻿@model IEnumerable<Hotel_Manager.Models.HotelService>
 
 @{
-    ViewData["Title"] = "Services";
+    ViewData["Title"] = "Index";
 }
 
 <h1>Services</h1>
 
-<!-- Filter Bar -->
-<div class="row mb-4 align-items-end">
-    <div class="col-md-6">
-        <label class="form-label text-muted">🔍 Search services</label>
-        <input type="text" id="searchInput" class="form-control"
-               placeholder="Service name or price..." onkeyup="filterServicesTable()">
-    </div>
-
-    <div class="col-md-2 d-flex align-items-end">
-        <button onclick="resetServiceFilters()" class="btn btn-outline-secondary w-100">
-            Reset
-        </button>
-    </div>
-</div>
-
 <p>
     <a asp-action="Create" class="btn btn-success btn-lg">Create New</a>
 </p>
-
-<table id="servicesTable" class="table table-striped">
+<table class="table table-striped">
     <thead>
         <tr>
-            <th>@Html.DisplayNameFor(model => model.Name)</th>
-            <th>@Html.DisplayNameFor(model => model.Price)</th>
+            <th>
+                @Html.DisplayNameFor(model => model.Name)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Price)
+            </th>
             <th></th>
         </tr>
     </thead>
     <tbody>
-        @foreach (var item in Model)
-        {
-            <tr>
-                <td>@Html.DisplayFor(modelItem => item.Name)</td>
-                <td>@Html.DisplayFor(modelItem => item.Price)</td>
-                <td>
-                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-warning">Edit</a>
-                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-info">Details</a>
-                    <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-danger">Delete</a>
-                </td>
-            </tr>
-        }
+@foreach (var item in Model) {
+        <tr>
+            <td>
+                @Html.DisplayFor(modelItem => item.Name)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Price)
+            </td>
+            <td>
+                    <a asp-action="Edit" class="btn btn-sm btn-warning" asp-route-id="@item.Id">Edit</a>
+                    <a asp-action="Details" class="btn btn-sm btn-info" asp-route-id="@item.Id">Details</a>
+                    <a asp-action="Delete" class="btn btn-sm btn-danger" asp-route-id="@item.Id">Delete</a>
+            </td>
+        </tr>
+}
     </tbody>
 </table>
-
-@section Scripts {
-    <script>
-        function filterServicesTable() {
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
-
-            const rows = document.querySelectorAll('#servicesTable tbody tr');
-
-            rows.forEach(row => {
-                const name  = row.cells[0].textContent.toLowerCase();
-                const price = row.cells[1].textContent.toLowerCase();
-
-                const matches = !searchTerm || name.includes(searchTerm) || price.includes(searchTerm);
-                row.style.display = matches ? '' : 'none';
-            });
-        }
-
-        function resetServiceFilters() {
-            document.getElementById('searchInput').value = '';
-            filterServicesTable();
-        }
-    </script>
-}
