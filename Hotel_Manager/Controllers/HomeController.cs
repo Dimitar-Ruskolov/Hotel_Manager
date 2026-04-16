@@ -1,9 +1,10 @@
 using Hotel_Manager.Data;
 using Hotel_Manager.Models;
+using Hotel_Manager.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
-using Microsoft.AspNetCore.Authorization;
 
 namespace Hotel_Manager.Controllers
 {
@@ -12,11 +13,13 @@ namespace Hotel_Manager.Controllers
         private readonly ILogger<HomeController> _logger;
 
         private readonly ApplicationDbContext _context;
+        private readonly DashboardService _dashboardService;
 
-        public HomeController(ILogger<HomeController> logger, ApplicationDbContext context)
+        public HomeController(ILogger<HomeController> logger, ApplicationDbContext context, DashboardService dashboardService)
         {
             _logger = logger;
             _context = context;
+            _dashboardService = dashboardService;
         }
 
         public async Task<IActionResult> Index()
@@ -32,6 +35,10 @@ namespace Hotel_Manager.Controllers
 
                 ViewBag.FreeRooms = await _context.Rooms
                     .CountAsync(r => r.IsAvailable);
+
+                var occupancy = _dashboardService.GetCurrentOccupancy();
+
+                ViewBag.Occupancy = occupancy;
             }
 
             return View();
