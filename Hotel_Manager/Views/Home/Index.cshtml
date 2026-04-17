@@ -6,7 +6,17 @@
 <div class="home-hero">
  
 <div class="container py-5">
-
+        <div class="d-flex justify-content-end mb-3">
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <form asp-area="Identity" asp-page="/Account/Login" method="post">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-outline-danger btn-sm">
+                        Logout
+                    </button>
+                </form>
+            }
+        </div>
         <div class="card shadow-lg border-0 glass-card">
         <div class="card-body p-5">
             <div class="row align-items-center justify-content-center g-4">
